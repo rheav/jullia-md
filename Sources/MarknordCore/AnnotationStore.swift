@@ -11,7 +11,7 @@ public final class AnnotationStore {
 
     public static var defaultURL: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return support.appending(path: "Marknord", directoryHint: .isDirectory).appending(path: "annotations.sqlite")
+        return support.appending(path: "Jullia", directoryHint: .isDirectory).appending(path: "annotations.sqlite")
     }
 
     /// Opens (creating if needed) the store at `url`; `nil` opens a throwaway in-memory store.

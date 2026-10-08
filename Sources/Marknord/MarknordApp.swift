@@ -5,10 +5,15 @@ import SwiftUI
 @main
 struct MarknordApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var model = AppModel.shared
+    @State private var model: AppModel
+
+    init() {
+        LegacyMigration.run()
+        _model = State(initialValue: AppModel.shared)
+    }
 
     var body: some Scene {
-        Window("Marknord", id: "main") {
+        Window("Jullia.md", id: "main") {
             MainView()
                 .environment(model)
                 .environment(model.settings)

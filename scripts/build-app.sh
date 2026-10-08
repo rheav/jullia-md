@@ -1,28 +1,36 @@
 #!/usr/bin/env bash
-# Builds build/Marknord.app from the Swift package (release), ad-hoc signed.
+# Builds build/Jullia.md.app from the Swift package (release), with its icon, ad-hoc signed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION=$(cat VERSION)
 CONFIG=${CONFIG:-release}
-APP=build/Marknord.app
+APP=build/Jullia.md.app
+ICON=assets/icon/AppIcon.icon
 
 swift build -c "$CONFIG" --product Marknord
 BIN=$(swift build -c "$CONFIG" --show-bin-path)/Marknord
 
-rm -rf "$APP"
+rm -rf "$APP" build/Marknord.app
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/Marknord"
+cp "$BIN" "$APP/Contents/MacOS/Jullia"
+
+# The layered Liquid Glass icon (Icon Composer format) → Assets.car, plus AppIcon.icns for older readers.
+# actool resolves relative paths against the icon's folder, so hand it absolute ones.
+xcrun actool "$PWD/$ICON" --compile "$PWD/$APP/Contents/Resources" --platform macosx --minimum-deployment-target 27.0 \
+  --app-icon AppIcon --output-partial-info-plist "$PWD/build/icon-partial.plist"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Marknord</string>
-  <key>CFBundleDisplayName</key><string>Marknord</string>
-  <key>CFBundleIdentifier</key><string>dev.rheav.marknord</string>
-  <key>CFBundleExecutable</key><string>Marknord</string>
+  <key>CFBundleName</key><string>Jullia.md</string>
+  <key>CFBundleDisplayName</key><string>Jullia.md</string>
+  <key>CFBundleIdentifier</key><string>dev.rheav.jullia</string>
+  <key>CFBundleExecutable</key><string>Jullia</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleIconName</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>

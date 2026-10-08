@@ -1,0 +1,82 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "extended-srgb:0.98039,0.96471,0.92549,1.00000",
+      "extended-srgb:0.92157,0.88627,0.81176,1.00000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0.5,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "groups": [
+    {
+      "name": "J",
+      "layers": [
+        {
+          "name": "j",
+          "image-name": "j.svg",
+          "glass": true
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "specular": true
+    },
+    {
+      "name": "Leaf",
+      "layers": [
+        {
+          "name": "corner-leaf",
+          "image-name": "corner-leaf.svg",
+          "glass": true
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.35
+      },
+      "specular": true
+    },
+    {
+      "name": "Lines",
+      "layers": [
+        {
+          "name": "lines",
+          "image-name": "lines.svg",
+          "glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}
