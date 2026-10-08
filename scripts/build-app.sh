@@ -8,10 +8,10 @@ CONFIG=${CONFIG:-release}
 APP=build/Jullia.md.app
 ICON=assets/icon/AppIcon.icon
 
-swift build -c "$CONFIG" --product Marknord
-BIN=$(swift build -c "$CONFIG" --show-bin-path)/Marknord
+swift build -c "$CONFIG" --product Jullia
+BIN=$(swift build -c "$CONFIG" --show-bin-path)/Jullia
 
-rm -rf "$APP" build/Marknord.app
+rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Jullia"
 

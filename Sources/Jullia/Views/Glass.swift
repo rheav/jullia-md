@@ -1,5 +1,5 @@
 import AppKit
-import MarknordCore
+import JulliaCore
 import SwiftUI
 
 /// The blurred desktop behind the window. Every glass surface is a theme tint laid over this.

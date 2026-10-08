@@ -1,5 +1,5 @@
 import AppKit
-import MarknordCore
+import JulliaCore
 import Observation
 
 /// What the text view paints over the rendered text: highlights, comment underlines, the passage being commented.

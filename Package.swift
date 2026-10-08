@@ -2,27 +2,31 @@
 import PackageDescription
 
 let package = Package(
-    name: "Marknord",
+    name: "Jullia",
     platforms: [.macOS(.v27)],
     products: [
-        .executable(name: "Marknord", targets: ["Marknord"]),
+        .executable(name: "Jullia", targets: ["Jullia"]),
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.9.0"),
     ],
     targets: [
         .target(
-            name: "MarknordCore",
+            name: "JulliaCore",
             dependencies: [.product(name: "Markdown", package: "swift-markdown")],
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
         .executableTarget(
-            name: "Marknord",
-            dependencies: ["MarknordCore"]
+            name: "Jullia",
+            dependencies: ["JulliaCore"]
         ),
         .testTarget(
-            name: "MarknordCoreTests",
-            dependencies: ["MarknordCore"]
+            name: "JulliaCoreTests",
+            dependencies: ["JulliaCore"]
+        ),
+        .testTarget(
+            name: "JulliaAppTests",
+            dependencies: ["Jullia"]
         ),
     ]
 )

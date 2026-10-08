@@ -1,4 +1,4 @@
-import MarknordCore
+import JulliaCore
 import SwiftUI
 
 /// One icon of a folded panel, named in its tooltip, with an optional count.

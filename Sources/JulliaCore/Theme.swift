@@ -22,7 +22,7 @@ public struct RGBA: Hashable, Sendable {
     }
 }
 
-/// The six marker colours, the same set Copy Hub uses.
+/// The six marker colours shared by highlights and comments.
 public enum MarkColor: String, CaseIterable, Codable, Sendable, Identifiable {
     case yellow, green, blue, pink, purple, orange
 

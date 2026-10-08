@@ -1,5 +1,5 @@
 import AppKit
-import MarknordCore
+import JulliaCore
 import Observation
 import UniformTypeIdentifiers
 
@@ -8,7 +8,7 @@ import UniformTypeIdentifiers
 final class AppModel {
     static let shared = AppModel()
 
-    let settings = AppSettings.shared
+    let settings: AppSettings
     @ObservationIgnored let store: AnnotationStore?
     private(set) var storeError: String?
 
@@ -18,7 +18,7 @@ final class AppModel {
     /// Annotations per document key, for the badges in the file sidebar.
     private(set) var counts: [String: Int] = [:]
 
-    /// A folded panel shrinks to a rail of icons, as in Copy Hub.
+    /// A folded panel shrinks to a rail of icons.
     var filesCollapsed: Bool { didSet { defaults.set(filesCollapsed, forKey: "filesCollapsed") } }
     var commentsCollapsed: Bool {
         didSet {
@@ -33,14 +33,20 @@ final class AppModel {
     enum Peek { case hover, pinned }
 
     @ObservationIgnored private var folderWatchers: [URL: FolderWatcher] = [:]
-    @ObservationIgnored private let defaults = UserDefaults.standard
+    @ObservationIgnored private let defaults: UserDefaults
     static let maxRecents = 8
 
-    private init() {
-        filesCollapsed = UserDefaults.standard.bool(forKey: "filesCollapsed")
-        commentsCollapsed = UserDefaults.standard.bool(forKey: "commentsCollapsed")
+    init(
+        defaults: UserDefaults = .standard,
+        settings: AppSettings = .shared,
+        storeURL: URL? = AnnotationStore.defaultURL
+    ) {
+        self.defaults = defaults
+        self.settings = settings
+        filesCollapsed = defaults.bool(forKey: "filesCollapsed")
+        commentsCollapsed = defaults.bool(forKey: "commentsCollapsed")
         do {
-            store = try AnnotationStore(url: AnnotationStore.defaultURL)
+            store = try AnnotationStore(url: storeURL)
         } catch {
             store = nil
             storeError = "As anotações não serão salvas: \(error)"
