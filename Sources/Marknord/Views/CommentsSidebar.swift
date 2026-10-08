@@ -6,6 +6,7 @@ import SwiftUI
 struct CommentsSidebar: View {
     let document: DocumentModel
     let theme: Theme
+    @Environment(AppModel.self) private var model
     @State private var showResolved = false
 
     var body: some View {
@@ -14,7 +15,18 @@ struct CommentsSidebar: View {
         let orphanHighlights = document.orphanHighlights
 
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 6) {
+                Button {
+                    model.commentsCollapsed.toggle()
+                } label: {
+                    Image(systemName: "sidebar.right")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.secondaryText.color)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(model.commentsCollapsed ? "Fixar comentários aberto (⌥⌘0)" : "Recolher comentários (⌥⌘0)")
                 Text("Comentários")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.heading.color)
@@ -28,8 +40,9 @@ struct CommentsSidebar: View {
                 .controlSize(.small)
                 .fixedSize()
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
+            .padding(.leading, 8)
+            .padding(.trailing, 14)
+            .padding(.top, 12)
             .padding(.bottom, 10)
 
             ScrollViewReader { proxy in

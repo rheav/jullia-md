@@ -18,15 +18,27 @@ final class AppModel {
     /// Annotations per document key, for the badges in the file sidebar.
     private(set) var counts: [String: Int] = [:]
 
-    var showFiles = true
-    var showComments = true
+    /// A folded panel shrinks to a rail of icons, as in Copy Hub.
+    var filesCollapsed: Bool { didSet { defaults.set(filesCollapsed, forKey: "filesCollapsed") } }
+    var commentsCollapsed: Bool {
+        didSet {
+            defaults.set(commentsCollapsed, forKey: "commentsCollapsed")
+            if !commentsCollapsed { commentsPeek = nil }
+        }
+    }
+    /// The comments panel floated out of its folded rail: on hover, or held open until dismissed.
+    var commentsPeek: Peek?
     var fileQuery = ""
+
+    enum Peek { case hover, pinned }
 
     @ObservationIgnored private var folderWatchers: [URL: FolderWatcher] = [:]
     @ObservationIgnored private let defaults = UserDefaults.standard
     static let maxRecents = 8
 
     private init() {
+        filesCollapsed = UserDefaults.standard.bool(forKey: "filesCollapsed")
+        commentsCollapsed = UserDefaults.standard.bool(forKey: "commentsCollapsed")
         do {
             store = try AnnotationStore(url: AnnotationStore.defaultURL)
         } catch {
@@ -155,11 +167,22 @@ final class AppModel {
     func commentSelection() {
         guard let document else { return }
         document.startComment(on: document.selection.length > 0 ? document.selection : nil)
-        showComments = true
+        revealComments()
     }
 
     func commentWholeDocument() {
         document?.startComment(on: nil)
-        showComments = true
+        revealComments()
+    }
+
+    /// Brings the comments into view: floats them out of the rail when it is folded.
+    func revealComments() {
+        if commentsCollapsed { commentsPeek = .pinned }
+    }
+
+    /// A click in the text puts a floated-out panel away, unless a comment is being written in it.
+    func dismissPeek() {
+        guard commentsPeek != nil, document?.composing == nil else { return }
+        commentsPeek = nil
     }
 }

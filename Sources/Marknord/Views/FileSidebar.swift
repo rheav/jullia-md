@@ -9,26 +9,39 @@ struct FileSidebar: View {
     var body: some View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: 8) {
-            // Room for the traffic lights, which sit over this panel.
-            Color.clear.frame(height: 26)
-
             HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(theme.secondaryText.color)
-                TextField("Buscar arquivos", text: $model.fileQuery)
-                    .textFieldStyle(.plain)
-                if !model.fileQuery.isEmpty {
-                    Button { model.fileQuery = "" } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(theme.secondaryText.color)
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(theme.secondaryText.color)
+                    TextField("Buscar arquivos", text: $model.fileQuery)
+                        .textFieldStyle(.plain)
+                    if !model.fileQuery.isEmpty {
+                        Button { model.fileQuery = "" } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(theme.secondaryText.color)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .font(.system(size: 12.5))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .background(theme.text.color.opacity(0.06), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+                Button {
+                    model.filesCollapsed = true
+                } label: {
+                    Image(systemName: "sidebar.left")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.secondaryText.color)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Recolher arquivos (⌃⌘S)")
             }
-            .font(.system(size: 12.5))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
-            .background(theme.text.color.opacity(0.06), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-            .padding(.horizontal, 10)
+            .padding(.leading, 10)
+            .padding(.trailing, 6)
+            .padding(.top, 10)
 
             List(selection: selection) {
                 if model.fileQuery.isEmpty, !model.recents.isEmpty {

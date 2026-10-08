@@ -91,7 +91,7 @@ private struct AppearanceSettings: View {
             } footer: {
                 Text(reduceTransparency
                     ? "“Reduzir transparência” está ligado no macOS: tudo aparece sólido."
-                    : "0% = sólido. Máximo de \(Int(GlassSetting.maxPercent))% para o texto continuar legível.")
+                    : "0% = sólido. Máximo de \(Int(GlassSetting.maxPercent))%.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

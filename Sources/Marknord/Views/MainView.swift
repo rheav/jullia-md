@@ -1,9 +1,20 @@
 import MarknordCore
 import SwiftUI
 
+enum Layout {
+    /// The strip along the top that holds the traffic lights and the path; panels start below it.
+    static let topBar: CGFloat = 50
+    static let filesWidth: CGFloat = 264
+    static let filesRail: CGFloat = 52
+    static let commentsWidth: CGFloat = 312
+    static let commentsRail: CGFloat = 44
+}
+
 struct MainView: View {
     @Environment(AppModel.self) private var model
     @Environment(AppSettings.self) private var settings
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @State private var peekTimer: Task<Void, Never>?
 
     private struct RenderKey: Equatable {
         var theme: ThemeID
@@ -12,29 +23,52 @@ struct MainView: View {
 
     var body: some View {
         let theme = settings.theme
+        let filesInsets = EdgeInsets(top: Layout.topBar, leading: PanelMetrics.gap, bottom: PanelMetrics.gap, trailing: 0)
+        let commentsInsets = EdgeInsets(top: Layout.topBar, leading: 0, bottom: PanelMetrics.gap, trailing: PanelMetrics.gap)
+
         HStack(spacing: 0) {
-            if model.showFiles {
-                FileSidebar(theme: theme)
-                    .frame(width: 264)
-                    .glassPanel(settings.filesGlass, theme: theme)
-                    .padding([.leading, .vertical], 8)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+            Group {
+                if model.filesCollapsed {
+                    FileRail(theme: theme).frame(width: Layout.filesRail)
+                } else {
+                    FileSidebar(theme: theme).frame(width: Layout.filesWidth)
+                }
             }
+            .glassPanel(settings.filesGlass, theme: theme)
+            .padding(filesInsets)
+            .windowTint(around: filesInsets, theme: theme, glass: settings.windowGlass)
 
             DocumentColumn(theme: theme)
                 .frame(minWidth: 420, maxWidth: .infinity)
+                .windowTint(around: EdgeInsets(), theme: theme, glass: settings.windowGlass)
 
-            if model.showComments, let document = model.document {
-                CommentsSidebar(document: document, theme: theme)
-                    .frame(width: 312)
-                    .glassPanel(settings.commentsGlass, theme: theme)
-                    .padding([.trailing, .vertical], 8)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            if let document = model.document {
+                Group {
+                    if model.commentsCollapsed {
+                        CommentsRail(document: document, theme: theme)
+                            .frame(width: Layout.commentsRail)
+                            .onHover { hoverPeek($0) }
+                    } else {
+                        CommentsSidebar(document: document, theme: theme)
+                            .frame(width: Layout.commentsWidth)
+                    }
+                }
+                .glassPanel(settings.commentsGlass, theme: theme)
+                .padding(commentsInsets)
+                .windowTint(around: commentsInsets, theme: theme, glass: settings.windowGlass)
             }
         }
-        .animation(.smooth(duration: 0.25), value: model.showFiles)
-        .animation(.smooth(duration: 0.25), value: model.showComments)
-        .background(WindowBackdrop(theme: theme, glass: settings.windowGlass))
+        .overlay(alignment: .topTrailing) { peekPanel(theme) }
+        .animation(.smooth(duration: 0.25), value: model.filesCollapsed)
+        .animation(.smooth(duration: 0.25), value: model.commentsCollapsed)
+        .animation(.smooth(duration: 0.2), value: model.commentsPeek)
+        .background {
+            if anyGlass {
+                BehindWindowBlur().ignoresSafeArea()
+            } else {
+                theme.background.color.ignoresSafeArea()
+            }
+        }
         .background(WindowConfigurator())
         .ignoresSafeArea()
         .tint(theme.accent.color)
@@ -42,7 +76,43 @@ struct MainView: View {
         .onAppear { applyAppearance(theme) }
         .onChange(of: theme.id) { applyAppearance(theme) }
         .onChange(of: RenderKey(theme: theme.id, fontSize: settings.fontSize)) { model.rerender() }
-        .onChange(of: model.document?.composing) { if model.document?.composing != nil { model.showComments = true } }
+        .onChange(of: model.document?.composing) { if model.document?.composing != nil { model.revealComments() } }
+        .onExitCommand { model.dismissPeek() }
+    }
+
+    private var anyGlass: Bool {
+        !reduceTransparency && [settings.windowGlass, settings.filesGlass, settings.commentsGlass].contains { $0.isOn }
+    }
+
+    /// The comments floated out of their folded rail, over the text.
+    @ViewBuilder
+    private func peekPanel(_ theme: Theme) -> some View {
+        if model.commentsCollapsed, model.commentsPeek != nil, let document = model.document {
+            CommentsSidebar(document: document, theme: theme)
+                .frame(width: Layout.commentsWidth)
+                .glassPanel(settings.commentsGlass, theme: theme, minimumOpacity: 1)
+                .shadow(color: .black.opacity(theme.isDark ? 0.4 : 0.15), radius: 22, x: -4, y: 8)
+                .padding(.top, Layout.topBar)
+                .padding(.bottom, PanelMetrics.gap)
+                .padding(.trailing, PanelMetrics.gap + Layout.commentsRail + 6)
+                .onHover { hoverPeek($0) }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+        }
+    }
+
+    /// Out after a moment's rest on the rail, back after a moment away — passing over it on the way elsewhere does
+    /// nothing. A pinned panel stays.
+    private func hoverPeek(_ inside: Bool) {
+        peekTimer?.cancel()
+        peekTimer = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(inside ? 120 : 220))
+            guard !Task.isCancelled else { return }
+            if inside {
+                if model.commentsPeek == nil { model.commentsPeek = .hover }
+            } else if model.commentsPeek == .hover {
+                model.commentsPeek = nil
+            }
+        }
     }
 
     /// System controls (menus, toggles, scrollers) follow the theme's lightness, whatever macOS is set to.
@@ -51,7 +121,7 @@ struct MainView: View {
     }
 }
 
-/// The middle column: a slim bar (path, sidebar buttons) over the document.
+/// The middle column: the path in the top strip, over the document.
 struct DocumentColumn: View {
     let theme: Theme
     @Environment(AppModel.self) private var model
@@ -83,58 +153,32 @@ struct DocumentColumn: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 10) {
-            if !model.showFiles {
-                // Room for the traffic lights.
-                Color.clear.frame(width: 64, height: 1)
-                barButton("sidebar.left", help: "Mostrar arquivos (⌃⌘S)") { model.showFiles = true }
-            }
+        HStack(spacing: 5) {
             if let document = model.document {
-                HStack(spacing: 5) {
-                    Text(document.url.deletingLastPathComponent().lastPathComponent)
-                        .foregroundStyle(theme.secondaryText.color)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(theme.secondaryText.color.opacity(0.7))
-                    Text(document.url.lastPathComponent)
-                        .fontWeight(.medium)
-                        .foregroundStyle(theme.heading.color)
-                }
-                .font(.system(size: 12.5))
-                .lineLimit(1)
-                .help(document.url.path)
+                Text(document.url.deletingLastPathComponent().lastPathComponent)
+                    .foregroundStyle(theme.secondaryText.color)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(theme.secondaryText.color.opacity(0.7))
+                Text(document.url.lastPathComponent)
+                    .fontWeight(.medium)
+                    .foregroundStyle(theme.heading.color)
             }
-            Spacer(minLength: 12)
-            if model.showFiles {
-                barButton("sidebar.left", help: "Esconder arquivos (⌃⌘S)") { model.showFiles = false }
-            }
-            if let document = model.document {
-                let open = document.topLevelComments.filter { !$0.isResolved }.count
-                Button {
-                    model.showComments.toggle()
-                } label: {
-                    Label(open > 0 ? "\(open)" : "Comentários", systemImage: model.showComments ? "text.bubble.fill" : "text.bubble")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .buttonStyle(.glass)
-                .help("Comentários (⌥⌘0)")
-            }
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 12)
-        .padding(.bottom, 4)
-        .frame(height: 50)
+        .font(.system(size: 12.5))
+        .lineLimit(1)
+        .help(model.document?.url.path ?? "")
+        // Clear of the traffic lights when the file panel is folded to its rail.
+        .padding(.leading, model.filesCollapsed ? 28 : 16)
+        .padding(.trailing, 16)
+        // Centred on the traffic lights' row rather than on the whole strip.
+        .frame(height: 32)
+        .padding(.top, 2)
+        .frame(height: Layout.topBar, alignment: .top)
         .background {
             Color.clear.contentShape(Rectangle()).gesture(WindowDragGesture())
         }
-    }
-
-    private func barButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 13, weight: .medium))
-        }
-        .buttonStyle(.glass)
-        .help(help)
     }
 }
 

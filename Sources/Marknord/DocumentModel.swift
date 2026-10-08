@@ -41,7 +41,11 @@ final class DocumentModel {
     private(set) var scrollRequest: ScrollRequest?
 
     /// The text view's selection, kept for menu commands. Not observed: it changes on every drag.
-    @ObservationIgnored var selection = NSRange(location: 0, length: 0)
+    @ObservationIgnored var selection = NSRange(location: 0, length: 0) {
+        didSet { if hasSelection != (selection.length > 0) { hasSelection = selection.length > 0 } }
+    }
+    /// Whether any text is selected — observed, for the rail's "comment the selection" button.
+    private(set) var hasSelection = false
     /// Called after any change to annotations, so the sidebar counts follow.
     @ObservationIgnored var onAnnotationsChanged: () -> Void = {}
 

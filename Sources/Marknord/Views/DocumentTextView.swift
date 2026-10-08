@@ -139,7 +139,7 @@ struct DocumentTextView: NSViewRepresentable {
 
         func comment(_ range: NSRange) {
             document?.startComment(on: range)
-            AppModel.shared.showComments = true
+            AppModel.shared.revealComments()
             textView?.setSelectedRange(NSRange(location: NSMaxRange(range), length: 0))
             textView?.hidePill()
         }
@@ -155,13 +155,14 @@ struct DocumentTextView: NSViewRepresentable {
         /// A plain click (no selection): a highlight under it gets the pill, a commented passage lights its card.
         func clicked(at location: Int?) {
             guard let textView, let document else { return }
+            AppModel.shared.dismissPeek()
             guard let location else {
                 document.activeCommentID = nil
                 return
             }
             if let comment = document.comment(at: location) {
                 document.activeCommentID = comment.id
-                AppModel.shared.showComments = true
+                AppModel.shared.revealComments()
             } else {
                 document.activeCommentID = nil
             }

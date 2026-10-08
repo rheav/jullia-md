@@ -70,9 +70,9 @@ struct MarknordCommands: Commands {
         }
 
         CommandGroup(after: .sidebar) {
-            Toggle("Arquivos", isOn: Binding(get: { model.showFiles }, set: { model.showFiles = $0 }))
+            Button(model.filesCollapsed ? "Expandir arquivos" : "Recolher arquivos") { model.filesCollapsed.toggle() }
                 .keyboardShortcut("s", modifiers: [.command, .control])
-            Toggle("Comentários", isOn: Binding(get: { model.showComments }, set: { model.showComments = $0 }))
+            Button(model.commentsCollapsed ? "Expandir comentários" : "Recolher comentários") { model.commentsCollapsed.toggle() }
                 .keyboardShortcut("0", modifiers: [.command, .option])
             Divider()
             Menu("Tema") {

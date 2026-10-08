@@ -5,7 +5,7 @@ import SwiftUI
 
 /// One glass surface: on/off and how see-through it is. `percent` 0 is solid; the ceiling keeps text readable.
 struct GlassSetting: Codable, Equatable {
-    static let maxPercent: Double = 55
+    static let maxPercent: Double = 85
 
     var enabled: Bool
     var percent: Double
@@ -15,6 +15,8 @@ struct GlassSetting: Codable, Equatable {
         guard enabled, !reduceTransparency else { return 1 }
         return 1 - min(max(percent, 0), Self.maxPercent) / 100
     }
+
+    var isOn: Bool { enabled && percent > 0 }
 
     func isGlassy(reduceTransparency: Bool) -> Bool {
         fillOpacity(reduceTransparency: reduceTransparency) < 1
@@ -60,9 +62,9 @@ final class AppSettings {
         darkTheme = ThemeID(rawValue: defaults.string(forKey: "darkTheme") ?? "") ?? .polar
         lightTheme = ThemeID(rawValue: defaults.string(forKey: "lightTheme") ?? "") ?? .snow
         fixedTheme = ThemeID(rawValue: defaults.string(forKey: "fixedTheme") ?? "") ?? .polar
-        windowGlass = Self.load(defaults, "windowGlass") ?? GlassSetting(enabled: true, percent: 20)
-        filesGlass = Self.load(defaults, "filesGlass") ?? GlassSetting(enabled: true, percent: 35)
-        commentsGlass = Self.load(defaults, "commentsGlass") ?? GlassSetting(enabled: true, percent: 25)
+        windowGlass = Self.load(defaults, "windowGlass") ?? GlassSetting(enabled: true, percent: 30)
+        filesGlass = Self.load(defaults, "filesGlass") ?? GlassSetting(enabled: true, percent: 45)
+        commentsGlass = Self.load(defaults, "commentsGlass") ?? GlassSetting(enabled: true, percent: 45)
         reopenFolders = defaults.bool(forKey: "reopenFolders")
         liveReload = defaults.bool(forKey: "liveReload")
         fontSize = defaults.double(forKey: "fontSize")
