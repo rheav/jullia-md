@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import Testing
-@testable import MarknordCore
+@testable import JulliaCore
 
 @Suite struct MarkdownRendererTests {
     let source = """
@@ -78,7 +78,7 @@ import Testing
 
 @Suite struct FileTreeTests {
     @Test func scansMarkdownOnlyAndPrunesEmptyFolders() throws {
-        let root = FileManager.default.temporaryDirectory.appending(path: "marknord-tree-\(UUID().uuidString)")
+        let root = FileManager.default.temporaryDirectory.appending(path: "jullia-tree-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         let fm = FileManager.default
         for dir in ["docs/specs", "empty", "node_modules/pkg", ".hidden"] {

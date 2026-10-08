@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MarknordCore
+@testable import JulliaCore
 
 @Suite struct AnnotationStoreTests {
     let anchor = TextAnchor(start: 3, end: 8, quote: "hello", prefix: "ab ", suffix: " world")
@@ -68,7 +68,7 @@ import Testing
     }
 
     @Test func persistsToDisk() throws {
-        let url = FileManager.default.temporaryDirectory.appending(path: "marknord-\(UUID().uuidString)/a.sqlite")
+        let url = FileManager.default.temporaryDirectory.appending(path: "jullia-\(UUID().uuidString)/a.sqlite")
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         do {
             let store = try AnnotationStore(url: url)

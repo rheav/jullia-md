@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import MarknordCore
+@testable import JulliaCore
 
 @Suite struct AnchoringTests {
     let text = "O gato subiu no telhado. O gato desceu do telhado. Fim." as NSString

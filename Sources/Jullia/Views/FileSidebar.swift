@@ -1,5 +1,5 @@
 import AppKit
-import MarknordCore
+import JulliaCore
 import SwiftUI
 
 struct FileSidebar: View {

@@ -1,4 +1,4 @@
-import MarknordCore
+import JulliaCore
 import SwiftUI
 
 struct SettingsView: View {

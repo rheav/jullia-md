@@ -1,6 +1,6 @@
 import AppKit
 import Testing
-@testable import MarknordCore
+@testable import JulliaCore
 
 /// Lays rendered text out in a real TextKit 1 view, where block styling problems show up.
 @MainActor @Suite struct LayoutTests {

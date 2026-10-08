@@ -1,5 +1,5 @@
 import AppKit
-import MarknordCore
+import JulliaCore
 import Observation
 import SwiftUI
 
@@ -28,7 +28,8 @@ struct GlassSetting: Codable, Equatable {
 final class AppSettings {
     static let shared = AppSettings()
 
-    @ObservationIgnored private let defaults = UserDefaults.standard
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private var appearanceObserver: (any NSObjectProtocol)?
 
     var followSystem: Bool { didSet { defaults.set(followSystem, forKey: "followSystem") } }
     var darkTheme: ThemeID { didSet { defaults.set(darkTheme.rawValue, forKey: "darkTheme") } }
@@ -53,7 +54,8 @@ final class AppSettings {
     static let fontSizes: ClosedRange<Double> = 12...26
     static let readingWidths: ClosedRange<Double> = 520...1100
 
-    private init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         defaults.register(defaults: [
             "followSystem": true, "reopenFolders": true, "liveReload": true,
             "fontSize": 16.0, "readingWidth": 760.0,
@@ -72,10 +74,16 @@ final class AppSettings {
         lastColor = MarkColor(rawValue: defaults.string(forKey: "lastColor") ?? "") ?? .yellow
         systemIsDark = Self.readSystemIsDark()
 
-        DistributedNotificationCenter.default().addObserver(
+        appearanceObserver = DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.systemIsDark = Self.readSystemIsDark() }
+        }
+    }
+
+    isolated deinit {
+        if let appearanceObserver {
+            DistributedNotificationCenter.default().removeObserver(appearanceObserver)
         }
     }
 
