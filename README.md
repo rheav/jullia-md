@@ -13,6 +13,12 @@ swift test                 # suíte do MarknordCore (renderer, âncoras, store, 
 open build/Jullia.md.app
 ```
 
+Instalar ou atualizar em `/Applications` (fecha o app aberto, troca a cópia e reabre):
+
+```bash
+./scripts/install.sh            # --no-open para não reabrir
+```
+
 Versão em `VERSION`. Anotações em `~/Library/Application Support/Jullia/annotations.sqlite`.
 
 O ícone é `assets/icon/AppIcon.icon` (formato do Icon Composer, em camadas de Liquid Glass); o `build-app.sh` o
