@@ -136,6 +136,7 @@ private final class Builder {
         case let quote as BlockQuote:
             let block = QuoteTextBlock()
             block.bar = theme.quoteBar.ns
+            block.setValue(100, type: .percentageValueType, for: .width)
             block.setWidth(context.indent, type: .absoluteValueType, for: .margin, edge: .minX)
             block.setWidth(size * 1.1, type: .absoluteValueType, for: .padding, edge: .minX)
             block.setWidth(size * 0.15, type: .absoluteValueType, for: .margin, edge: .minY)
@@ -165,6 +166,7 @@ private final class Builder {
         case is ThematicBreak:
             let block = RuleTextBlock()
             block.line = theme.rule.ns
+            block.setValue(100, type: .percentageValueType, for: .width)
             block.setWidth(context.indent, type: .absoluteValueType, for: .margin, edge: .minX)
             var inner = context
             inner.textBlocks.append(block)
@@ -209,6 +211,7 @@ private final class Builder {
     func codeBlock(_ code: String, context: Context) {
         let block = CodeTextBlock()
         block.fill = theme.codeBackground.ns
+        block.setValue(100, type: .percentageValueType, for: .width)
         block.setWidth(context.indent, type: .absoluteValueType, for: .margin, edge: .minX)
         block.setWidth(size * 0.2, type: .absoluteValueType, for: .margin, edge: .minY)
         block.setWidth(size * 0.8, type: .absoluteValueType, for: .margin, edge: .maxY)
