@@ -46,6 +46,16 @@ struct RailButton: View {
     }
 }
 
+/// The gear: opens the Settings window from inside the app.
+private struct SettingsRailButton: View {
+    let theme: Theme
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        RailButton(symbol: "gearshape", help: "Ajustes (⌘,)", theme: theme) { openSettings() }
+    }
+}
+
 private struct RailDivider: View {
     let theme: Theme
     var body: some View {
@@ -84,6 +94,7 @@ struct FileRail: View {
             }
             Spacer(minLength: 0)
             RailButton(symbol: "plus", help: "Abrir pasta…", theme: theme) { model.presentFolderPanel() }
+            SettingsRailButton(theme: theme)
         }
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)

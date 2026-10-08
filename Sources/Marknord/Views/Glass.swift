@@ -91,7 +91,8 @@ private struct GlassPanel: ViewModifier {
                     lineWidth: 1
                 )
             }
-            .overlay { shape.strokeBorder(theme.rule.color.opacity(0.6), lineWidth: 0.5) }
+            // A thin Jullia-green edge ties the panels to the logo.
+            .overlay { shape.strokeBorder(theme.accent.color.opacity(theme.isDark ? 0.38 : 0.45), lineWidth: 1) }
     }
 }
 

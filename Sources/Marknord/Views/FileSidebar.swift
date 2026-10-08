@@ -81,6 +81,12 @@ struct FileSidebar: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(theme.secondaryText.color)
                 Spacer()
+                SettingsLink {
+                    Image(systemName: "gearshape")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.secondaryText.color)
+                .help("Ajustes (⌘,)")
                 Button {
                     model.rescanAll()
                 } label: {

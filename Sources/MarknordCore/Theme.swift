@@ -67,6 +67,7 @@ public struct Theme: Sendable, Identifiable {
     public var secondaryText: RGBA
     public var heading: RGBA
     public var link: RGBA
+    /// The Jullia green: the logo's leaf, tuned per theme. Borders, selection, active controls, quote bars.
     public var accent: RGBA
     public var codeBackground: RGBA
     public var codeText: RGBA
@@ -93,10 +94,10 @@ public struct Theme: Sendable, Identifiable {
         id: .polar, name: "Polar", isDark: true, serif: false,
         background: RGBA(0x2A2F3C), surface: RGBA(0x323848),
         text: RGBA(0xD8DEE9), secondaryText: RGBA(0xAEB9CD), heading: RGBA(0xECEFF4),
-        link: RGBA(0x8ECAE6), accent: RGBA(0x8ECAE6),
+        link: RGBA(0x8ECAE6), accent: RGBA(0x9CCF86),
         codeBackground: RGBA(0x363D4E), codeText: RGBA(0xB2DBA4),
-        quoteBar: RGBA(0x8ECAE6), quoteText: RGBA(0xAEB9CD),
-        rule: RGBA(0xD9E0EE, alpha: 0.16), selection: RGBA(0x8ECAE6, alpha: 0.32),
+        quoteBar: RGBA(0x9CCF86), quoteText: RGBA(0xAEB9CD),
+        rule: RGBA(0xD9E0EE, alpha: 0.16), selection: RGBA(0x9CCF86, alpha: 0.28),
         marks: marks(fills: [0xF2CF94, 0xB2DBA4, 0x8ECAE6, 0xE79AA4, 0xCBAAD9, 0xF2B48A], fillAlpha: 0.30)
     )
 
@@ -104,10 +105,10 @@ public struct Theme: Sendable, Identifiable {
         id: .ink, name: "Ink", isDark: true, serif: true,
         background: RGBA(0x121214), surface: RGBA(0x1B1B1E),
         text: RGBA(0xE6E1D6), secondaryText: RGBA(0xA39C8F), heading: RGBA(0xF2E9D8),
-        link: RGBA(0xF2B48A), accent: RGBA(0xF2B48A),
+        link: RGBA(0xF2B48A), accent: RGBA(0xA8CF8E),
         codeBackground: RGBA(0x211F1D), codeText: RGBA(0xD8C7A4),
-        quoteBar: RGBA(0xF2B48A), quoteText: RGBA(0xA39C8F),
-        rule: RGBA(0xE6E1D6, alpha: 0.13), selection: RGBA(0xF2B48A, alpha: 0.28),
+        quoteBar: RGBA(0xA8CF8E), quoteText: RGBA(0xA39C8F),
+        rule: RGBA(0xE6E1D6, alpha: 0.13), selection: RGBA(0xA8CF8E, alpha: 0.26),
         marks: marks(fills: [0xE8C872, 0x9CC78F, 0x86B4D4, 0xE39AA0, 0xBFA2D6, 0xF2B48A], fillAlpha: 0.28)
     )
 
@@ -115,10 +116,10 @@ public struct Theme: Sendable, Identifiable {
         id: .snow, name: "Snow", isDark: false, serif: false,
         background: RGBA(0xF1F4FA), surface: RGBA(0xE6ECF6),
         text: RGBA(0x2B3240), secondaryText: RGBA(0x55627D), heading: RGBA(0x3D4A68),
-        link: RGBA(0x3F7FBF), accent: RGBA(0x3F7FBF),
+        link: RGBA(0x3F7FBF), accent: RGBA(0x3F8A52),
         codeBackground: RGBA(0xE3E9F4), codeText: RGBA(0x3E6E4C),
-        quoteBar: RGBA(0x3F7FBF), quoteText: RGBA(0x55627D),
-        rule: RGBA(0x3D4A68, alpha: 0.15), selection: RGBA(0x3F7FBF, alpha: 0.22),
+        quoteBar: RGBA(0x3F8A52), quoteText: RGBA(0x55627D),
+        rule: RGBA(0x3D4A68, alpha: 0.15), selection: RGBA(0x3F8A52, alpha: 0.20),
         marks: marks(
             fills: [0xF2CF94, 0xB2DBA4, 0xA9CFEE, 0xF0B3BB, 0xD6BFE2, 0xF6C6A4], fillAlpha: 0.62,
             strokes: [0xB3771C, 0x4F8F5F, 0x3F7FBF, 0xC2515F, 0x8A5FA8, 0xC46A2B]
@@ -129,10 +130,10 @@ public struct Theme: Sendable, Identifiable {
         id: .paper, name: "Paper", isDark: false, serif: true,
         background: RGBA(0xF6F1E7), surface: RGBA(0xEDE5D5),
         text: RGBA(0x3B342B), secondaryText: RGBA(0x6E6355), heading: RGBA(0x2E2820),
-        link: RGBA(0xA0522D), accent: RGBA(0xA0522D),
+        link: RGBA(0xA0522D), accent: RGBA(0x4F7F3F),
         codeBackground: RGBA(0xECE4D4), codeText: RGBA(0x7A5A2E),
-        quoteBar: RGBA(0xA0522D), quoteText: RGBA(0x6E6355),
-        rule: RGBA(0x3B342B, alpha: 0.15), selection: RGBA(0xA0522D, alpha: 0.20),
+        quoteBar: RGBA(0x4F7F3F), quoteText: RGBA(0x6E6355),
+        rule: RGBA(0x3B342B, alpha: 0.15), selection: RGBA(0x4F7F3F, alpha: 0.18),
         marks: marks(
             fills: [0xECC96A, 0xA8C99A, 0x9FBFD9, 0xE3A5A5, 0xC4ABD6, 0xE9B48A], fillAlpha: 0.48,
             strokes: [0xB8862B, 0x5F8A4F, 0x4F7FA8, 0xB25555, 0x82609E, 0xB86A32]
