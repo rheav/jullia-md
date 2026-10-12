@@ -5,7 +5,7 @@ public struct StoreError: Error, CustomStringConvertible {
     public var description: String
 }
 
-/// Highlights and comments, in one SQLite file. The Markdown files themselves are never written.
+/// Highlights and comments, in one SQLite file. The source documents themselves are never written.
 public final class AnnotationStore {
     private var db: OpaquePointer?
 
@@ -39,24 +39,26 @@ public final class AnnotationStore {
 
     public func highlights(for docPath: String) throws -> [Highlight] {
         try query(
-            "SELECT id, start, \"end\", quote, prefix, suffix, color, created_at FROM highlights WHERE doc_path = ? ORDER BY start",
+            "SELECT id, start, \"end\", quote, prefix, suffix, color, created_at, pdf_anchor FROM highlights WHERE doc_path = ? ORDER BY start",
             [.text(docPath)]
         ) { row in
-            Highlight(
+            var highlight = Highlight(
                 id: row.text(0)!, docPath: docPath,
                 anchor: TextAnchor(start: row.int(1)!, end: row.int(2)!, quote: row.text(3)!, prefix: row.text(4)!, suffix: row.text(5)!),
                 color: MarkColor(rawValue: row.text(6)!) ?? .yellow,
                 createdAt: row.date(7)!
             )
+            highlight.anchor.pdf = Self.decodePDF(row.text(8))
+            return highlight
         }
     }
 
     public func insert(_ highlight: Highlight) throws {
         let a = highlight.anchor
         try run(
-            "INSERT INTO highlights (id, doc_path, start, \"end\", quote, prefix, suffix, color, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO highlights (id, doc_path, start, \"end\", quote, prefix, suffix, color, created_at, pdf_anchor) VALUES (?,?,?,?,?,?,?,?,?,?)",
             [.text(highlight.id), .text(highlight.docPath), .int(a.start), .int(a.end), .text(a.quote), .text(a.prefix),
-             .text(a.suffix), .text(highlight.color.rawValue), .date(highlight.createdAt)]
+             .text(a.suffix), .text(highlight.color.rawValue), .date(highlight.createdAt), try Self.encodePDF(a.pdf)]
         )
     }
 
@@ -65,7 +67,7 @@ public final class AnnotationStore {
     }
 
     public func setAnchor(_ anchor: TextAnchor, ofHighlight id: String) throws {
-        try run("UPDATE highlights SET start = ?, \"end\" = ? WHERE id = ?", [.int(anchor.start), .int(anchor.end), .text(id)])
+        try run("UPDATE highlights SET start = ?, \"end\" = ?, pdf_anchor = ? WHERE id = ?", [.int(anchor.start), .int(anchor.end), try Self.encodePDF(anchor.pdf), .text(id)])
     }
 
     public func deleteHighlight(_ id: String) throws {
@@ -78,7 +80,7 @@ public final class AnnotationStore {
     public func comments(for docPath: String) throws -> [Comment] {
         try query(
             """
-            SELECT id, parent_id, start, "end", quote, prefix, suffix, body, color, resolved_at, created_at, updated_at
+            SELECT id, parent_id, start, "end", quote, prefix, suffix, body, color, resolved_at, created_at, updated_at, pdf_anchor, ai_generated
             FROM comments WHERE doc_path = ? ORDER BY created_at, rowid
             """,
             [.text(docPath)]
@@ -87,10 +89,11 @@ public final class AnnotationStore {
             if let start = row.int(2), let end = row.int(3) {
                 anchor = TextAnchor(start: start, end: end, quote: row.text(4) ?? "", prefix: row.text(5) ?? "", suffix: row.text(6) ?? "")
             }
+            anchor?.pdf = Self.decodePDF(row.text(12))
             return Comment(
                 id: row.text(0)!, docPath: docPath, parentID: row.text(1), anchor: anchor, body: row.text(7)!,
                 color: row.text(8).flatMap(MarkColor.init(rawValue:)), resolvedAt: row.date(9),
-                createdAt: row.date(10)!, updatedAt: row.date(11)!
+                createdAt: row.date(10)!, updatedAt: row.date(11)!, isAIGenerated: row.int(13) == 1
             )
         }
     }
@@ -99,14 +102,14 @@ public final class AnnotationStore {
         let a = comment.anchor
         try run(
             """
-            INSERT INTO comments (id, doc_path, parent_id, start, "end", quote, prefix, suffix, body, color, resolved_at, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            INSERT INTO comments (id, doc_path, parent_id, start, "end", quote, prefix, suffix, body, color, resolved_at, created_at, updated_at, pdf_anchor, ai_generated)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             [.text(comment.id), .text(comment.docPath), .optionalText(comment.parentID),
              a.map { .int($0.start) } ?? .null, a.map { .int($0.end) } ?? .null,
              .optionalText(a?.quote), .optionalText(a?.prefix), .optionalText(a?.suffix),
              .text(comment.body), .optionalText(comment.color?.rawValue), comment.resolvedAt.map { .date($0) } ?? .null,
-             .date(comment.createdAt), .date(comment.updatedAt)]
+             .date(comment.createdAt), .date(comment.updatedAt), try Self.encodePDF(a?.pdf), .int(comment.isAIGenerated ? 1 : 0)]
         )
     }
 
@@ -124,12 +127,33 @@ public final class AnnotationStore {
     }
 
     public func setAnchor(_ anchor: TextAnchor, ofComment id: String) throws {
-        try run("UPDATE comments SET start = ?, \"end\" = ? WHERE id = ?", [.int(anchor.start), .int(anchor.end), .text(id)])
+        try run("UPDATE comments SET start = ?, \"end\" = ?, pdf_anchor = ? WHERE id = ?", [.int(anchor.start), .int(anchor.end), try Self.encodePDF(anchor.pdf), .text(id)])
     }
 
     /// Deletes a comment and, with it, its answers.
     public func deleteComment(_ id: String) throws {
         try run("DELETE FROM comments WHERE id = ?", [.text(id)])
+    }
+
+    // MARK: Chat history
+
+    public func conversations(for docPath: String) throws -> [ChatConversation] {
+        try query("SELECT payload FROM chat_conversations WHERE doc_path = ? ORDER BY updated_at DESC, rowid DESC", [.text(docPath)]) { row in
+            try JSONDecoder().decode(ChatConversation.self, from: Data((row.text(0) ?? "").utf8))
+        }
+    }
+
+    public func saveConversation(_ conversation: ChatConversation, for docPath: String) throws {
+        let payload = String(decoding: try JSONEncoder().encode(conversation), as: UTF8.self)
+        try run("""
+            INSERT INTO chat_conversations (id, doc_path, payload, updated_at) VALUES (?,?,?,?)
+            ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at
+            WHERE chat_conversations.doc_path = excluded.doc_path
+            """, [.text(conversation.id), .text(docPath), .text(payload), .date(conversation.updatedAt)])
+    }
+
+    public func deleteConversation(_ id: String, for docPath: String) throws {
+        try run("DELETE FROM chat_conversations WHERE id = ? AND doc_path = ?", [.text(id), .text(docPath)])
     }
 
     // MARK: Counts
@@ -186,6 +210,48 @@ public final class AnnotationStore {
                 PRAGMA user_version = 1;
                 """)
         }
+        if version < 2 {
+            try execute("""
+                BEGIN IMMEDIATE;
+                ALTER TABLE highlights ADD COLUMN pdf_anchor TEXT;
+                ALTER TABLE comments ADD COLUMN pdf_anchor TEXT;
+                PRAGMA user_version = 2;
+                COMMIT;
+                """)
+        }
+        if version < 3 {
+            try execute("""
+                BEGIN IMMEDIATE;
+                ALTER TABLE comments ADD COLUMN ai_generated INTEGER NOT NULL DEFAULT 0;
+                PRAGMA user_version = 3;
+                COMMIT;
+                """)
+        }
+        if version < 4 {
+            try execute("""
+                BEGIN IMMEDIATE;
+                CREATE TABLE chat_conversations (
+                  id TEXT PRIMARY KEY,
+                  doc_path TEXT NOT NULL,
+                  payload TEXT NOT NULL,
+                  updated_at REAL NOT NULL
+                );
+                CREATE INDEX chat_conversations_doc ON chat_conversations(doc_path, updated_at);
+                PRAGMA user_version = 4;
+                COMMIT;
+                """)
+        }
+    }
+
+    private static func encodePDF(_ fragments: [PDFAnchorFragment]?) throws -> Value {
+        guard let fragments else { return .null }
+        return .text(String(decoding: try JSONEncoder().encode(fragments), as: UTF8.self))
+    }
+
+    private static func decodePDF(_ json: String?) -> [PDFAnchorFragment]? {
+        guard let json else { return nil }
+        // Keep malformed PDF metadata distinguishable from a legacy text-only anchor.
+        return (try? JSONDecoder().decode([PDFAnchorFragment].self, from: Data(json.utf8))) ?? []
     }
 
     // MARK: SQLite plumbing

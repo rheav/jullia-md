@@ -122,7 +122,7 @@ struct FileSidebar: View {
                 let url = switch row {
                 case .recent(let url), .tree(let url): url
                 }
-                guard FileTree.isMarkdown(url) else { return }
+                guard FileTree.isSupported(url) else { return }
                 // Not from inside the list's own selection callback: opening reloads the list.
                 DispatchQueue.main.async { model.openFile(url) }
             }
@@ -146,7 +146,7 @@ private struct FileRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: isDirectory ? "folder" : "doc.text")
+            Image(systemName: isDirectory ? "folder" : (name.lowercased().hasSuffix(".pdf") ? "doc.richtext" : "doc.text"))
                 .foregroundStyle(isDirectory ? theme.accent.color : theme.secondaryText.color)
                 .frame(width: 16)
             Text(name)

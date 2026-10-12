@@ -8,6 +8,7 @@ struct SelectionPill: View {
     let current: MarkColor?
     let onColor: (MarkColor) -> Void
     let onComment: () -> Void
+    let onChat: () -> Void
     let onCopy: () -> Void
     let onRemove: () -> Void
 
@@ -29,6 +30,7 @@ struct SelectionPill: View {
             }
             Divider().frame(height: 16)
             pillButton("text.bubble", help: "Comentar", action: onComment)
+            pillButton("sparkles", help: "Conversar sobre trecho", action: onChat)
             pillButton("doc.on.doc", help: "Copiar", action: onCopy)
             if current != nil {
                 pillButton("eraser", help: "Remover destaque", action: onRemove)
@@ -49,6 +51,7 @@ struct SelectionPill: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(help)
         .help(help)
     }
 }

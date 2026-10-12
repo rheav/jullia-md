@@ -8,6 +8,9 @@ public struct TextAnchor: Codable, Hashable, Sendable {
     public var quote: String
     public var prefix: String
     public var suffix: String
+    /// PDF selections may have several disjoint ranges, each in a different page's text.
+    /// Nil for Markdown and for the page-local anchors inside these fragments.
+    public var pdf: [PDFAnchorFragment]?
 
     public init(start: Int, end: Int, quote: String, prefix: String, suffix: String) {
         self.start = start
@@ -18,6 +21,16 @@ public struct TextAnchor: Codable, Hashable, Sendable {
     }
 
     public var range: NSRange { NSRange(location: start, length: end - start) }
+}
+
+public struct PDFAnchorFragment: Codable, Hashable, Sendable {
+    public var pageIndex: Int
+    public var text: TextAnchor
+
+    public init(pageIndex: Int, text: TextAnchor) {
+        self.pageIndex = pageIndex
+        self.text = text
+    }
 }
 
 public enum AnchorResolution: Equatable, Sendable {

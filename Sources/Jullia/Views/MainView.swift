@@ -7,6 +7,7 @@ enum Layout {
     static let filesWidth: CGFloat = 264
     static let filesRail: CGFloat = 52
     static let commentsWidth: CGFloat = 312
+    static let chatWidth: CGFloat = 360
     static let commentsRail: CGFloat = 44
 }
 
@@ -49,8 +50,8 @@ struct MainView: View {
                             .frame(width: Layout.commentsRail)
                             .onHover { hoverPeek($0) }
                     } else {
-                        CommentsSidebar(document: document, theme: theme)
-                            .frame(width: Layout.commentsWidth)
+                        InspectorSidebar(document: document, theme: theme)
+                            .frame(width: model.inspectorTab == .chat ? Layout.chatWidth : Layout.commentsWidth)
                     }
                 }
                 .glassPanel(settings.commentsGlass, theme: theme)
@@ -88,8 +89,8 @@ struct MainView: View {
     @ViewBuilder
     private func peekPanel(_ theme: Theme) -> some View {
         if model.commentsCollapsed, model.commentsPeek != nil, let document = model.document {
-            CommentsSidebar(document: document, theme: theme)
-                .frame(width: Layout.commentsWidth)
+            InspectorSidebar(document: document, theme: theme)
+                .frame(width: model.inspectorTab == .chat ? Layout.chatWidth : Layout.commentsWidth)
                 .glassPanel(settings.commentsGlass, theme: theme, minimumOpacity: 1)
                 .shadow(color: .black.opacity(theme.isDark ? 0.4 : 0.15), radius: 22, x: -4, y: 8)
                 .padding(.top, Layout.topBar)
@@ -134,6 +135,8 @@ struct DocumentColumn: View {
                 if let error = document.loadError {
                     ContentUnavailableView("Arquivo indisponível", systemImage: "exclamationmark.triangle", description: Text(error))
                         .foregroundStyle(theme.secondaryText.color)
+                } else if document.isPDF {
+                    PDFReader(document: document, theme: theme).id(document.url)
                 } else {
                     DocumentTextView(
                         document: document,
@@ -195,7 +198,7 @@ struct EmptyState: View {
                 Text("Nada aberto ainda")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(theme.heading.color)
-                Text("Abra uma pasta para navegar pelos seus .md, ou um arquivo solto.")
+                Text("Abra uma pasta para navegar pelos seus Markdown e PDFs, ou um arquivo solto.")
                     .foregroundStyle(theme.secondaryText.color)
             }
             HStack(spacing: 10) {

@@ -31,6 +31,10 @@ struct JulliaApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        AppModel.shared.document?.chat.cancel()
+    }
+
     func application(_ application: NSApplication, open urls: [URL]) {
         urls.forEach(AppModel.shared.open)
     }

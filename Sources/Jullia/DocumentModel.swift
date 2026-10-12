@@ -1,17 +1,20 @@
 import AppKit
 import JulliaCore
 import Observation
+import PDFKit
 
 /// What the text view paints over the rendered text: highlights, comment underlines, the passage being commented.
 struct Decoration: Equatable {
     var range: NSRange
     var background: NSColor?
     var underline: NSColor?
+    var anchor: TextAnchor? = nil
 }
 
 struct ScrollRequest: Equatable {
     var range: NSRange
     var token: Int
+    var anchor: TextAnchor? = nil
 }
 
 /// A comment being written: about a passage, or about the whole document when `anchor` is nil.
@@ -19,11 +22,22 @@ struct Composing: Equatable {
     var anchor: TextAnchor?
 }
 
-/// One open Markdown file: its rendered text and the highlights and comments on it.
+/// One open Markdown or PDF file: its rendered text and the highlights and comments on it.
 @MainActor @Observable
 final class DocumentModel {
     let url: URL
     let key: String
+    let chat: PassageChat
+    var isPDF: Bool { url.pathExtension.lowercased() == "pdf" }
+    private(set) var pdfDocument: PDFDocument?
+    private(set) var pdfIndex: PDFTextIndex?
+    private(set) var pdfLocked = false
+    private(set) var passwordError: String?
+    var pdfPageNumber = 1
+    private(set) var pdfZoomToken = 0
+    private(set) var pdfZoomDirection = 0
+    var hasPDFText: Bool { pdfIndex?.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+    @ObservationIgnored private var pdfSelectionAnchor: TextAnchor?
 
     private(set) var rendered = NSAttributedString()
     /// Bumped whenever `rendered` is replaced, so the text view knows to reload.
@@ -48,6 +62,7 @@ final class DocumentModel {
     private(set) var hasSelection = false
     /// Called after any change to annotations, so the sidebar counts follow.
     @ObservationIgnored var onAnnotationsChanged: () -> Void = {}
+    @ObservationIgnored var onChatStarted: () -> Void = {}
 
     @ObservationIgnored private let store: AnnotationStore?
     @ObservationIgnored private var source = ""
@@ -55,12 +70,13 @@ final class DocumentModel {
     @ObservationIgnored private var watcher: FileWatcher?
     @ObservationIgnored private var scrollToken = 0
 
-    var text: NSString { rendered.string as NSString }
+    var text: NSString { pdfIndex?.text ?? (rendered.string as NSString) }
 
-    init(url: URL, store: AnnotationStore?) {
+    init(url: URL, store: AnnotationStore?, chatGenerator: (any PassageChatGenerating)? = nil) {
         self.url = url
         self.key = documentKey(for: url)
         self.store = store
+        self.chat = PassageChat(generator: chatGenerator ?? ApplePassageChat(), store: store, docPath: self.key)
         highlights = (try? store?.highlights(for: key)) ?? []
         comments = (try? store?.comments(for: key)) ?? []
         readSource()
@@ -88,10 +104,33 @@ final class DocumentModel {
         let before = text as String
         readSource()
         render()
-        if text as String != before { resolveAnchors() }
+        if isPDF {
+            selection = NSRange(location: 0, length: 0)
+            pdfSelectionAnchor = nil
+            scrollRequest = nil
+        }
+        if isPDF || text as String != before {
+            resolveAnchors()
+            if isPDF, let anchor = composing?.anchor {
+                composing = resolvedAnchor(anchor).map { Composing(anchor: $0) }
+            }
+        }
     }
 
     private func readSource() {
+        if isPDF {
+            pdfIndex = nil
+            pdfDocument = PDFDocument(url: url)
+            pdfLocked = pdfDocument?.isLocked == true
+            passwordError = nil
+            guard pdfDocument != nil else {
+                loadError = "Não foi possível abrir este PDF. O arquivo pode estar danificado ou indisponível."
+                return
+            }
+            loadError = nil
+            if !pdfLocked { loadPDFText() }
+            return
+        }
         do {
             var encoding = String.Encoding.utf8
             source = try String(contentsOf: url, usedEncoding: &encoding)
@@ -103,33 +142,78 @@ final class DocumentModel {
 
     private func render() {
         guard let options else { return }
-        rendered = MarkdownRenderer.render(source, options: options)
+        if !isPDF { rendered = MarkdownRenderer.render(source, options: options) }
         renderToken += 1
     }
 
+    private func loadPDFText() {
+        guard let pdfDocument else { return }
+        guard pdfDocument.pageCount > 0 else {
+            loadError = "Este PDF não contém páginas."
+            return
+        }
+        pdfIndex = PDFTextIndex(document: pdfDocument)
+    }
+
+    func unlockPDF(password: String) {
+        guard let pdfDocument, pdfLocked else { return }
+        guard pdfDocument.unlock(withPassword: password) else {
+            passwordError = "Senha incorreta. Tente novamente."
+            return
+        }
+        pdfLocked = false
+        passwordError = nil
+        loadPDFText()
+        renderToken += 1
+        resolveAnchors()
+    }
+
+    func zoomPDF(_ direction: Int) {
+        pdfZoomDirection = direction
+        pdfZoomToken += 1
+    }
+
+    func selectPDF(_ selection: PDFSelection?) {
+        pdfSelectionAnchor = selection.flatMap { pdfIndex?.anchor(for: $0) }
+        self.selection = pdfSelectionAnchor?.range ?? NSRange(location: 0, length: 0)
+    }
+
+    private func makeAnchor(_ range: NSRange) -> TextAnchor? {
+        guard range.location >= 0, range.location <= text.length,
+              range.length > 0, range.length <= text.length - range.location else { return nil }
+        if isPDF {
+            if let pdfSelectionAnchor, pdfSelectionAnchor.range == range { return pdfSelectionAnchor }
+            return pdfIndex?.anchor(for: range)
+        }
+        return Anchoring.make(range: range, in: text)
+    }
+
+    private func resolvedAnchor(_ anchor: TextAnchor) -> TextAnchor? {
+        if isPDF { return pdfIndex?.resolve(anchor) }
+        guard let range = Anchoring.resolve(anchor, in: text).range else { return nil }
+        var resolved = anchor
+        resolved.start = range.location
+        resolved.end = NSMaxRange(range)
+        return resolved
+    }
+
     private func resolveAnchors() {
-        let text = self.text
         highlightRanges = [:]
         for index in highlights.indices {
-            let resolution = Anchoring.resolve(highlights[index].anchor, in: text)
-            guard let range = resolution.range else { continue }
-            highlightRanges[highlights[index].id] = range
-            if case .moved = resolution {
-                highlights[index].anchor.start = range.location
-                highlights[index].anchor.end = NSMaxRange(range)
-                try? store?.setAnchor(highlights[index].anchor, ofHighlight: highlights[index].id)
+            guard let anchor = resolvedAnchor(highlights[index].anchor) else { continue }
+            highlightRanges[highlights[index].id] = anchor.range
+            if anchor != highlights[index].anchor {
+                highlights[index].anchor = anchor
+                try? store?.setAnchor(anchor, ofHighlight: highlights[index].id)
             }
         }
         commentRanges = [:]
         for index in comments.indices {
-            guard let anchor = comments[index].anchor else { continue }
-            let resolution = Anchoring.resolve(anchor, in: text)
-            guard let range = resolution.range else { continue }
-            commentRanges[comments[index].id] = range
-            if case .moved = resolution {
-                comments[index].anchor?.start = range.location
-                comments[index].anchor?.end = NSMaxRange(range)
-                try? store?.setAnchor(comments[index].anchor!, ofComment: comments[index].id)
+            guard let original = comments[index].anchor, let anchor = resolvedAnchor(original) else { continue }
+            commentRanges[comments[index].id] = anchor.range
+            if anchor != original {
+                comments[index].anchor = anchor
+                try? store?.setAnchor(anchor, ofComment: comments[index].id)
             }
         }
     }
@@ -138,7 +222,7 @@ final class DocumentModel {
         var result: [Decoration] = []
         for highlight in highlights {
             guard let range = highlightRanges[highlight.id] else { continue }
-            result.append(Decoration(range: range, background: theme.tone(highlight.color).fill.ns))
+            result.append(Decoration(range: range, background: theme.tone(highlight.color).fill.ns, anchor: highlight.anchor))
         }
         for comment in topLevelComments where !comment.isResolved {
             guard let range = commentRanges[comment.id] else { continue }
@@ -146,33 +230,71 @@ final class DocumentModel {
             result.append(Decoration(
                 range: range,
                 background: comment.id == activeCommentID ? stroke.alpha(theme.isDark ? 0.2 : 0.16).ns : nil,
-                underline: stroke.ns
+                underline: stroke.ns, anchor: comment.anchor
             ))
         }
         if let anchor = composing?.anchor {
-            result.append(Decoration(range: anchor.range, background: theme.selection.ns))
+            result.append(Decoration(range: anchor.range, background: theme.selection.ns, anchor: anchor))
         }
         return result
     }
 
-    func scroll(to range: NSRange) {
+    func scroll(to range: NSRange, anchor: TextAnchor? = nil) {
         scrollToken += 1
-        scrollRequest = ScrollRequest(range: range, token: scrollToken)
+        scrollRequest = ScrollRequest(range: range, token: scrollToken, anchor: anchor)
+    }
+
+    // MARK: Passage chat
+
+    func startChat(on range: NSRange) {
+        guard let anchor = makeAnchor(range) else { return }
+        startChat(anchor: anchor)
+    }
+
+    func startChat(anchor: TextAnchor) {
+        guard !anchor.quote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        chat.start(anchor: anchor)
+        onChatStarted()
+    }
+
+    func focusChatPassage() {
+        guard let original = chat.anchor, let anchor = resolvedAnchor(original) else { return }
+        scroll(to: anchor.range, anchor: anchor)
+    }
+
+    /// Saving uses the captured passage, even if the current selection or document offsets changed.
+    @discardableResult
+    func saveChatResponse(_ id: String) throws -> String {
+        if comments.contains(where: { $0.id == id }) { return id }
+        guard let original = chat.anchor,
+              let message = chat.messages.first(where: { $0.id == id && $0.role == .assistant && $0.status == .complete }),
+              !message.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw ChatError(message: "Aguarde uma resposta completa antes de salvar a anotação.")
+        }
+        guard let store else { throw ChatError(message: "O banco de anotações está indisponível. A resposta não foi salva.") }
+        let resolved = resolvedAnchor(original)
+        let comment = Comment(id: id, docPath: key, anchor: resolved ?? original,
+                              body: message.content, isAIGenerated: true)
+        try store.insert(comment)
+        comments.append(comment)
+        if let resolved { commentRanges[id] = resolved.range }
+        onAnnotationsChanged()
+        return id
     }
 
     // MARK: Highlights
 
     func highlight(_ range: NSRange, color: MarkColor) {
-        guard range.length > 0, NSMaxRange(range) <= text.length else { return }
-        if let same = highlights.first(where: { highlightRanges[$0.id] == range }) {
+        guard let anchor = makeAnchor(range) else { return }
+        if let same = highlights.first(where: { highlightRanges[$0.id] == range && $0.anchor.pdf == anchor.pdf }) {
             recolorHighlight(same.id, to: color)
             return
         }
         // A new highlight swallows the ones it covers entirely.
-        for covered in highlights where highlightRanges[covered.id].map({ NSIntersectionRange($0, range) == $0 }) == true {
+        for covered in highlights where !isPDF && highlightRanges[covered.id].map({ NSIntersectionRange($0, range) == $0 }) == true {
             removeHighlight(covered.id)
         }
-        let highlight = Highlight(docPath: key, anchor: Anchoring.make(range: range, in: text), color: color)
+        let highlight = Highlight(docPath: key, anchor: anchor, color: color)
         do {
             try store?.insert(highlight)
             highlights.append(highlight)
@@ -236,8 +358,8 @@ final class DocumentModel {
     }
 
     func startComment(on range: NSRange?) {
-        if let range, range.length > 0, NSMaxRange(range) <= text.length {
-            composing = Composing(anchor: Anchoring.make(range: range, in: text))
+        if let range, let anchor = makeAnchor(range) {
+            composing = Composing(anchor: anchor)
         } else {
             composing = Composing(anchor: nil)
         }
@@ -300,6 +422,6 @@ final class DocumentModel {
     /// From the inspector: light the comment up and bring its passage into view.
     func focusComment(_ id: String) {
         activeCommentID = id
-        if let range = commentRanges[id] { scroll(to: range) }
+        if let range = commentRanges[id] { scroll(to: range, anchor: comments.first { $0.id == id }?.anchor) }
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import SQLite3
 @testable import JulliaCore
 
 @Suite struct AnnotationStoreTests {
@@ -73,8 +74,61 @@ import Testing
         do {
             let store = try AnnotationStore(url: url)
             try store.insert(Highlight(docPath: "/a.md", anchor: anchor, color: .orange))
+            try store.insert(Comment(docPath: "/a.md", anchor: anchor, body: "Resposta da IA", isAIGenerated: true))
         }
         let reopened = try AnnotationStore(url: url)
         #expect(try reopened.highlights(for: "/a.md").count == 1)
+        #expect(try reopened.comments(for: "/a.md").first?.isAIGenerated == true)
+    }
+
+    @Test func pdfFragmentsPersistForHighlightsAndComments() throws {
+        let store = try AnnotationStore(url: nil)
+        var pdfAnchor = anchor
+        pdfAnchor.pdf = [PDFAnchorFragment(pageIndex: 2, text: anchor)]
+        let highlight = Highlight(docPath: "/a.pdf", anchor: pdfAnchor, color: .pink)
+        let comment = Comment(docPath: "/a.pdf", anchor: pdfAnchor, body: "PDF")
+        try store.insert(highlight)
+        try store.insert(comment)
+        #expect(try store.highlights(for: "/a.pdf")[0].anchor == pdfAnchor)
+        #expect(try store.comments(for: "/a.pdf")[0].anchor == pdfAnchor)
+        pdfAnchor.pdf?[0].pageIndex = 4
+        try store.setAnchor(pdfAnchor, ofHighlight: highlight.id)
+        try store.setAnchor(pdfAnchor, ofComment: comment.id)
+        #expect(try store.highlights(for: "/a.pdf")[0].anchor.pdf?.first?.pageIndex == 4)
+        #expect(try store.comments(for: "/a.pdf")[0].anchor?.pdf?.first?.pageIndex == 4)
+    }
+
+    @Test(arguments: [1, 2]) func migratesOldSchemasWithoutLosingMarkdownAnnotations(version: Int) throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).sqlite")
+        defer { try? FileManager.default.removeItem(at: url) }
+        var db: OpaquePointer?
+        #expect(sqlite3_open(url.path, &db) == SQLITE_OK)
+        let sql = """
+        CREATE TABLE highlights (id TEXT PRIMARY KEY, doc_path TEXT NOT NULL, start INTEGER NOT NULL,
+          "end" INTEGER NOT NULL, quote TEXT NOT NULL, prefix TEXT NOT NULL, suffix TEXT NOT NULL,
+          color TEXT NOT NULL, created_at REAL NOT NULL);
+        CREATE TABLE comments (id TEXT PRIMARY KEY, doc_path TEXT NOT NULL, parent_id TEXT REFERENCES comments(id) ON DELETE CASCADE,
+          start INTEGER, "end" INTEGER, quote TEXT, prefix TEXT, suffix TEXT, body TEXT NOT NULL,
+          color TEXT, resolved_at REAL, created_at REAL NOT NULL, updated_at REAL NOT NULL);
+        INSERT INTO highlights VALUES ('old', '/a.md', 0, 5, 'hello', '', '', 'green', 100);
+        INSERT INTO comments VALUES ('thread', '/a.md', NULL, 0, 5, 'hello', '', '', 'original', NULL, NULL, 100, 100);
+        PRAGMA user_version = 1;
+        """
+        #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
+        if version == 2 {
+            #expect(sqlite3_exec(db, "ALTER TABLE highlights ADD COLUMN pdf_anchor TEXT; ALTER TABLE comments ADD COLUMN pdf_anchor TEXT; PRAGMA user_version = 2;", nil, nil, nil) == SQLITE_OK)
+        }
+        sqlite3_close(db)
+        let store = try AnnotationStore(url: url)
+        #expect(try store.highlights(for: "/a.md")[0].anchor.pdf == nil)
+        #expect(try store.highlights(for: "/a.md")[0].anchor.quote == "hello")
+        #expect(try store.comments(for: "/a.md")[0].body == "original")
+        #expect(try store.comments(for: "/a.md")[0].isAIGenerated == false)
+        var pdfAnchor = anchor
+        pdfAnchor.pdf = [PDFAnchorFragment(pageIndex: 0, text: anchor)]
+        try store.insert(Highlight(docPath: "/a.pdf", anchor: pdfAnchor, color: .blue))
+        let reopened = try AnnotationStore(url: url)
+        #expect(try reopened.highlights(for: "/a.pdf")[0].anchor == pdfAnchor)
+        #expect(try reopened.annotationCounts() == ["/a.md": 2, "/a.pdf": 1])
     }
 }

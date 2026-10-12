@@ -4,4 +4,5 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 export JULLIA_SCREENSHOTS="$PWD/docs/screenshots"
-swift test --filter ScreenshotTests
+export JULLIA_CHAT_SCREENSHOTS="$PWD/docs/screenshots"
+swift test --filter 'ScreenshotTests|renderChatSidebar'

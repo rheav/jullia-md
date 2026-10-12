@@ -118,10 +118,14 @@ struct CommentsRail: View {
                 symbol: "text.bubble", help: open > 0 ? "Comentários · \(open)" : "Comentários", theme: theme,
                 count: open, active: model.commentsPeek == .pinned, tone: theme.tone(.yellow).stroke.color
             ) {
+                model.inspectorTab = .comments
                 model.commentsPeek = model.commentsPeek == .pinned ? nil : .pinned
             }
             RailButton(symbol: "plus.bubble", help: "Comentar o trecho selecionado (⌥⌘M)", theme: theme, lit: document.hasSelection) {
                 model.commentSelection()
+            }
+            RailButton(symbol: "sparkles", help: "Chat com IA", theme: theme) {
+                model.revealChat()
             }
             Spacer(minLength: 0)
         }

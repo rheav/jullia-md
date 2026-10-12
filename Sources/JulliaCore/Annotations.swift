@@ -29,10 +29,13 @@ public struct Comment: Identifiable, Hashable, Sendable {
     public var resolvedAt: Date?
     public var createdAt: Date
     public var updatedAt: Date
+    /// Provenance stays with the annotation, including after edits.
+    public var isAIGenerated: Bool
 
     public init(
         id: String = UUID().uuidString, docPath: String, parentID: String? = nil, anchor: TextAnchor?,
-        body: String, color: MarkColor? = nil, resolvedAt: Date? = nil, createdAt: Date = .now, updatedAt: Date = .now
+        body: String, color: MarkColor? = nil, resolvedAt: Date? = nil, createdAt: Date = .now, updatedAt: Date = .now,
+        isAIGenerated: Bool = false
     ) {
         self.id = id
         self.docPath = docPath
@@ -43,6 +46,7 @@ public struct Comment: Identifiable, Hashable, Sendable {
         self.resolvedAt = resolvedAt
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.isAIGenerated = isAIGenerated
     }
 
     public var isResolved: Bool { resolvedAt != nil }

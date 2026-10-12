@@ -109,7 +109,7 @@ struct DocumentTextView: NSViewRepresentable {
 
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
             guard let url = (link as? URL) ?? (link as? String).flatMap(URL.init(string:)) else { return false }
-            if url.isFileURL, FileTree.isMarkdown(url) {
+            if url.isFileURL, FileTree.isSupported(url) {
                 AppModel.shared.openFile(url)
             } else {
                 NSWorkspace.shared.open(url)
@@ -141,6 +141,11 @@ struct DocumentTextView: NSViewRepresentable {
             document?.startComment(on: range)
             AppModel.shared.revealComments()
             textView?.setSelectedRange(NSRange(location: NSMaxRange(range), length: 0))
+            textView?.hidePill()
+        }
+
+        func chat(_ range: NSRange) {
+            document?.startChat(on: range)
             textView?.hidePill()
         }
 
@@ -271,6 +276,7 @@ final class MarkTextView: NSTextView {
                 }
             },
             onComment: { coordinator.comment(range) },
+            onChat: { coordinator.chat(range) },
             onCopy: { coordinator.copy(range) },
             onRemove: { if case .highlight(let id, _) = mode { coordinator.remove(highlight: id) } }
         )
@@ -327,6 +333,9 @@ final class MarkTextView: NSTextView {
             items.append(highlight)
             items.append(ActionMenuItem(title: "Comentar…", image: NSImage(systemSymbolName: "text.bubble", accessibilityDescription: nil)) {
                 coordinator.comment(selection)
+            })
+            items.append(ActionMenuItem(title: "Conversar sobre trecho", image: NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)) {
+                coordinator.chat(selection)
             })
         }
 

@@ -45,6 +45,11 @@ struct CommentCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
+            if comment.isAIGenerated {
+                Label("Gerada por IA · Apple Intelligence", systemImage: "sparkles")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(theme.accent.color)
+            }
             if let anchor = comment.anchor {
                 Quote(text: anchor.quote, color: stroke, theme: theme, detached: orphan)
             } else {

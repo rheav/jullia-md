@@ -1,6 +1,6 @@
 import Foundation
 
-/// A folder or Markdown file in a folder opened in the sidebar. Folders without Markdown anywhere below are left out.
+/// A folder, Markdown file or PDF in a folder opened in the sidebar. Folders without supported documents anywhere below are left out.
 public struct FileNode: Identifiable, Hashable, Sendable {
     public var url: URL
     public var name: String
@@ -33,6 +33,10 @@ public enum FileTree {
         markdownExtensions.contains(url.pathExtension.lowercased())
     }
 
+    public static func isSupported(_ url: URL) -> Bool {
+        isMarkdown(url) || url.pathExtension.lowercased() == "pdf"
+    }
+
     public static func scan(_ root: URL) -> FileNode {
         FileNode(url: root, name: root.lastPathComponent, children: children(of: root, depth: 0))
     }
@@ -55,7 +59,7 @@ public enum FileTree {
                 if !below.isEmpty {
                     folders.append(FileNode(url: entry, name: entry.lastPathComponent, children: below))
                 }
-            } else if isMarkdown(entry) {
+            } else if isSupported(entry) {
                 files.append(FileNode(url: entry, name: entry.lastPathComponent, children: nil))
             }
         }

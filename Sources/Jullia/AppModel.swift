@@ -28,6 +28,8 @@ final class AppModel {
     }
     /// The comments panel floated out of its folded rail: on hover, or held open until dismissed.
     var commentsPeek: Peek?
+    enum InspectorTab: String, CaseIterable { case comments = "Comentários", chat = "Chat com IA" }
+    var inspectorTab: InspectorTab = .comments
     var fileQuery = ""
 
     enum Peek { case hover, pinned }
@@ -72,7 +74,7 @@ final class AppModel {
 
     // MARK: Opening
 
-    /// Opens whatever was handed over: a folder goes to the sidebar, a Markdown file opens.
+    /// Opens whatever was handed over: a folder goes to the sidebar, a Markdown or PDF file opens.
     func open(_ url: URL) {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else { return }
@@ -85,8 +87,10 @@ final class AppModel {
 
     func openFile(_ url: URL) {
         guard document?.url != url else { return }
+        document?.chat.cancel()
         let document = DocumentModel(url: url, store: store)
         document.onAnnotationsChanged = { [weak self] in self?.refreshCounts() }
+        document.onChatStarted = { [weak self] in self?.revealChat() }
         document.watch { [weak self] in self?.settings.liveReload ?? false }
         self.document = document
         document.apply(renderOptions)
@@ -108,8 +112,8 @@ final class AppModel {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText, .plainText, .folder]
-        panel.message = "Escolha arquivos Markdown ou pastas"
+        panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText, .plainText, .pdf, .folder]
+        panel.message = "Escolha arquivos Markdown, PDF ou pastas"
         if panel.runModal() == .OK { panel.urls.forEach(open) }
     }
 
@@ -183,7 +187,19 @@ final class AppModel {
 
     /// Brings the comments into view: floats them out of the rail when it is folded.
     func revealComments() {
+        inspectorTab = .comments
         if commentsCollapsed { commentsPeek = .pinned }
+    }
+
+    func revealChat() {
+        inspectorTab = .chat
+        commentsCollapsed = false
+        commentsPeek = nil
+    }
+
+    func chatSelection() {
+        guard let document, document.hasSelection else { return }
+        document.startChat(on: document.selection)
     }
 
     /// A click in the text puts a floated-out panel away, unless a comment is being written in it.

@@ -31,6 +31,9 @@ struct JulliaCommands: Commands {
                 Button("Comentar trecho…") { model.commentSelection() }
                     .keyboardShortcut("m", modifiers: [.command, .option])
                 Button("Comentar o documento todo…") { model.commentWholeDocument() }
+                Button("Conversar sobre trecho") { model.chatSelection() }
+                    .keyboardShortcut("i", modifiers: [.command, .option])
+                    .disabled(model.document?.hasSelection != true)
             }
             .disabled(model.document == nil)
         }
@@ -48,11 +51,17 @@ struct JulliaCommands: Commands {
                 }
             }
             Divider()
-            Button("Aumentar texto") { model.settings.adjustFontSize(by: 1) }
+            Button(model.document?.isPDF == true ? "Aumentar zoom" : "Aumentar texto") {
+                if model.document?.isPDF == true { model.document?.zoomPDF(1) } else { model.settings.adjustFontSize(by: 1) }
+            }
                 .keyboardShortcut("+")
-            Button("Diminuir texto") { model.settings.adjustFontSize(by: -1) }
+            Button(model.document?.isPDF == true ? "Diminuir zoom" : "Diminuir texto") {
+                if model.document?.isPDF == true { model.document?.zoomPDF(-1) } else { model.settings.adjustFontSize(by: -1) }
+            }
                 .keyboardShortcut("-")
-            Button("Tamanho padrão") { model.settings.fontSize = 16 }
+            Button(model.document?.isPDF == true ? "Ajustar PDF à janela" : "Tamanho padrão") {
+                if model.document?.isPDF == true { model.document?.zoomPDF(0) } else { model.settings.fontSize = 16 }
+            }
                 .keyboardShortcut("0")
             Divider()
         }

@@ -2,25 +2,37 @@
 
 **Leia com calma. Destaque o que importa. Continue a conversa nas margens.**
 
-Jullia.md é um visualizador de Markdown nativo para macOS, feito em SwiftUI e AppKit. Abra suas notas, escolha um tema e adicione destaques e comentários sem modificar os arquivos originais.
+Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em SwiftUI e AppKit. Leia, destaque, anote e converse sobre trechos com a Apple Intelligence local, sem modificar os arquivos originais.
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.4.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.5.0**
 
-[Instalação](#instalação) · [Como usar](#como-usar) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+[Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.5.0
+
+- Leitura de PDFs com zoom, seleção entre páginas e anotações por trecho.
+- Aba **Chat com IA** para conversar sobre seleções de PDF e Markdown usando Foundation Models, no próprio Mac.
+- Histórico persistente por documento, com reabertura, continuação e exclusão por uma lixeira vermelha.
+- Respostas salvas como anotações com identificação permanente de origem da IA.
+
+O banco local é atualizado automaticamente na primeira abertura, preservando os destaques e comentários existentes.
 
 ## O que você pode fazer
 
 - **Ler Markdown com controles nativos:** títulos, listas, tarefas, tabelas, citações, blocos de código, links e imagens locais.
+- **Ler e anotar PDFs:** páginas e zoom nativos, destaques em seis cores e comentários vinculados a trechos, inclusive entre páginas.
 - **Navegar por pastas:** árvore de arquivos, busca por nome, documentos recentes e contadores de anotações.
 - **Destacar em seis cores:** amarelo, verde, azul, rosa, roxo e laranja, com uma barra flutuante sobre a seleção.
 - **Comentar trechos ou o documento inteiro:** responder, editar, resolver, reabrir e escolher a cor de cada conversa.
+- **Conversar sobre um trecho com IA:** selecione texto no Markdown ou PDF, converse com o modelo local da Apple Intelligence e salve respostas como anotações identificadas como IA.
+- **Retomar conversas:** consulte o histórico de cada documento, continue uma conversa anterior ou exclua suas mensagens sem apagar anotações salvas.
 - **Acompanhar alterações externas:** recarregamento automático e tentativa de reencontrar os trechos anotados após uma edição.
 - **Ajustar a leitura:** quatro temas, tamanho do texto, largura da coluna e transparência independente para cada painel.
 - **Recolher as sidebars:** mais espaço para ler, com acesso rápido a arquivos e comentários pelas barras laterais.
 
-O app funciona com arquivos locais e mantém as anotações em SQLite. Não exige conta nem um serviço de sincronização.
+O app funciona com arquivos locais e mantém as anotações e o histórico de IA em SQLite. Não exige conta no Jullia nem um serviço de sincronização.
 
 ## Instalação
 
@@ -50,7 +62,10 @@ O script cria `build/Jullia.md.app` em modo release, compila o ícone em camadas
 
 ### Instalar ou atualizar em Applications
 
+Em um checkout existente, obtenha a versão mais recente antes de instalar:
+
 ```bash
+git pull --ff-only origin main
 ./scripts/install.sh
 ```
 
@@ -66,17 +81,45 @@ Para instalar sem abrir ao final:
 
 ### Abrir seus documentos
 
-Use **⌘O** para abrir arquivos ou **⇧⌘O** para adicionar uma pasta. Também é possível arrastar arquivos e pastas para a sidebar ou para a tela inicial, e abrir um `.md` pelo Finder com **Abrir com → Jullia.md**.
+Use **⌘O** para abrir arquivos ou **⇧⌘O** para adicionar uma pasta. Também é possível arrastar arquivos e pastas para a sidebar ou para a tela inicial, e abrir um `.md` ou `.pdf` pelo Finder com **Abrir com → Jullia.md**.
 
 Para experimentar, abra a pasta [`examples`](examples) e selecione [`Boas-vindas.md`](examples/Boas-vindas.md). Os textos de demonstração vêm sem anotações; os comentários das imagens são criados pelo gerador de screenshots.
 
-A árvore reconhece `.md`, `.markdown`, `.mdown` e `.mkd`, ignora arquivos ocultos e links simbólicos e omite pastas sem Markdown. Diretórios de build e dependências, como `node_modules`, `.build`, `build`, `dist`, `DerivedData` e `Pods`, ficam fora da navegação. A busca filtra nomes de arquivos, sem diferenciar maiúsculas ou acentos.
+A árvore reconhece `.md`, `.markdown`, `.mdown`, `.mkd` e `.pdf`, ignora arquivos ocultos e links simbólicos e omite pastas sem Markdown ou PDF. Diretórios de build e dependências, como `node_modules`, `.build`, `build`, `dist`, `DerivedData` e `Pods`, ficam fora da navegação. A busca filtra nomes de arquivos, sem diferenciar maiúsculas ou acentos.
 
 ### Destacar e comentar
 
 Selecione um trecho para abrir a barra de marcação. Escolha uma cor para destacar, o balão para comentar ou o botão de cópia para copiar o texto. O menu contextual também oferece essas ações. Clique em um destaque existente para mudar sua cor ou removê-lo.
 
 Na sidebar de comentários, você pode iniciar uma conversa sobre o documento inteiro, responder a uma conversa existente e alternar entre **Abertos** e **Resolvidos**. Clicar em um comentário vinculado a um trecho leva até sua posição no documento.
+
+### PDFs
+
+PDFs abrem no leitor nativo PDFKit. Selecione texto para destacar, comentar ou copiar; clique em um destaque para mudar sua cor ou removê-lo. Clicar em um comentário na sidebar navega até o trecho. As seleções podem atravessar páginas e as anotações continuam disponíveis ao reabrir o arquivo.
+
+A barra do PDF mostra a página atual e oferece zoom e ajuste à janela. Com um PDF aberto, **⌘+**, **⌘−** e **⌘0** controlam o zoom. As cores do documento original são preservadas; os temas alteram a interface e as marcações do Jullia.
+
+PDFs protegidos pedem senha, que não é salva. PDFs sem texto extraível podem ser visualizados e receber comentários sobre o documento inteiro; reconhecimento de texto em imagens (OCR) não está incluído. As anotações ficam no SQLite, não são gravadas nem exportadas para o PDF. Marcações já existentes no arquivo continuam visíveis e não são importadas como conversas do Jullia.
+
+Após uma alteração externa, o app tenta reencontrar cada trecho pelo texto e pelo contexto das páginas. Se parte da seleção desaparecer, a anotação fica em **Órfãos**. A recuperação é aproximada e depende do texto extraído pelo PDFKit.
+
+### Chat com IA
+
+Selecione um trecho e clique em **✨**, escolha **Conversar sobre trecho** no menu contextual ou pressione **⌥⌘I**. A aba **Chat com IA** abre no painel da direita, com a citação fixa acima da conversa. Faça perguntas sucessivas, use **⌘Return** para enviar e **Parar** para interromper uma resposta.
+
+O recurso usa o modelo local do framework Foundation Models. Requer Apple Intelligence disponível no Mac, com o modelo baixado e suporte a português. A interface informa quando o modelo está indisponível e permite verificar novamente. Não há chave de API, servidor próprio nem fallback para nuvem.
+
+**Salvar como anotação** guarda uma resposta completa nos comentários do trecho, com o selo **Gerada por IA · Apple Intelligence**, preservado mesmo após editar a anotação. O arquivo original permanece intacto.
+
+As conversas são salvas automaticamente neste Mac, por documento. Clique em **Histórico** para ver conversas anteriores, reabrir uma delas e continuar de onde parou, inclusive após fechar o app. **Nova conversa** preserva a anterior no histórico. Cada conversa tem uma **lixeira vermelha** para excluí-la; a conversa aberta também pode ser excluída pela lixeira do cabeçalho. Excluir uma conversa não apaga respostas já salvas como anotações. Conversas feitas antes da versão com histórico não podem ser recuperadas se já foram descartadas.
+
+A IA pode errar. Trechos grandes demais são recusados sem corte silencioso. Quando a conversa cresce, o app mantém o trecho e os turnos mais recentes no contexto do modelo e informa isso na interface; o histórico visível permanece completo. PDFs precisam ter texto selecionável; OCR não está incluído.
+
+| Conversa sobre um trecho | Histórico por documento |
+| --- | --- |
+| ![Chat com citação fixa e ações para salvar respostas como anotações](docs/screenshots/polar-chat.png) | ![Histórico com conversas anteriores e lixeiras vermelhas para exclusão](docs/screenshots/polar-history.png) |
+
+As imagens usam conversas de demonstração para mostrar os controles da interface.
 
 ### Editar no seu editor favorito
 
@@ -117,24 +160,25 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌘R | Recarregar documento e pastas |
 | ⇧⌘H | Destacar a seleção com a última cor usada |
 | ⌥⌘M | Comentar a seleção; sem seleção, comentar o documento |
+| ⌥⌘I | Conversar sobre o trecho selecionado com IA |
 | ⌃⌘S | Expandir ou recolher arquivos |
 | ⌥⌘0 | Expandir ou recolher comentários |
 | ⌃⌘1 / 2 / 3 / 4 | Polar / Ink / Snow / Paper |
-| ⌘+ / ⌘− | Aumentar ou diminuir o texto |
-| ⌘0 | Restaurar o texto para 16 pt |
+| ⌘+ / ⌘− | Aumentar ou diminuir o texto; em PDF, ajustar o zoom |
+| ⌘0 | Restaurar o texto para 16 pt; em PDF, ajustar à janela |
 | ⌘, | Abrir ajustes |
-| ⌘↩ | Enviar o comentário em edição |
+| ⌘↩ | Enviar o comentário em edição ou a pergunta no chat |
 | Esc | Cancelar a edição de comentário ou dispensar a prévia lateral |
 
 ## Seus dados
 
 | Dado | Onde fica |
 | --- | --- |
-| Arquivos Markdown | Nas pastas que você abriu; o app não os sobrescreve |
-| Destaques e comentários | `~/Library/Application Support/Jullia/annotations.sqlite` |
+| Arquivos Markdown e PDF | Nas pastas que você abriu; o app não os sobrescreve |
+| Destaques, comentários e histórico de IA | `~/Library/Application Support/Jullia/annotations.sqlite` |
 | Preferências, pastas e arquivos recentes | UserDefaults, domínio `dev.rheav.jullia` |
 
-As anotações são associadas ao caminho absoluto do arquivo, com links simbólicos resolvidos. **Mover ou renomear um documento não transfere suas anotações automaticamente.**
+As anotações e conversas são associadas ao caminho absoluto do arquivo, com links simbólicos resolvidos. **Mover ou renomear um documento não transfere suas anotações e seu histórico automaticamente.**
 
 Para fazer backup, encerre o app e copie a pasta inteira `~/Library/Application Support/Jullia`, além dos seus documentos. O banco usa WAL; enquanto aberto, pode haver arquivos auxiliares `annotations.sqlite-wal` e `annotations.sqlite-shm`.
 
@@ -157,7 +201,8 @@ Até a versão 0.2.0, o projeto se chamava **Marknord**. Na primeira abertura co
 swift build                  # Compilação de desenvolvimento
 swift test                   # Testes do core e da integração com o app
 CONFIG=debug ./scripts/build-app.sh
-./scripts/screenshots.sh     # Atualiza os cinco PNGs da documentação
+./scripts/screenshots.sh     # Atualiza as imagens do leitor, chat e histórico
+JULLIA_TEST_APPLE_INTELLIGENCE=1 swift test --filter nativeModelSmoke
 ```
 
 Abra [`Package.swift`](Package.swift) no Xcode para trabalhar no pacote. Para testar a integração com Finder, o ícone e a identidade de preferências do app instalado, use o bundle produzido por `build-app.sh`.
@@ -169,14 +214,14 @@ Sources/
   JulliaCore/               Renderer Markdown, temas, âncoras, SQLite e árvore de arquivos
 Tests/
   JulliaCoreTests/          Renderização, layout TextKit, âncoras, banco e navegação
-  JulliaAppTests/           Persistência de sessão, recarregamento e snapshots opcionais
+  JulliaAppTests/           PDF, chat, histórico, sessão, recarregamento e snapshots opcionais
 assets/icon/AppIcon.icon/   Ícone em camadas do Icon Composer
 examples/                  Documentos para experimentar o app
 scripts/                   Build do bundle, instalação e screenshots
 docs/                      Arquitetura, imagens e especificação original
 ```
 
-O parser usa `swift-markdown` 0.9.0; SQLite vem do sistema. A interface combina SwiftUI com um `NSTextView` em TextKit 1, sem WebView. Os detalhes do fluxo de renderização e das anotações estão em [Arquitetura](docs/architecture.md). Para contribuir, consulte [CONTRIBUTING.md](CONTRIBUTING.md).
+O parser usa `swift-markdown` 0.9.0; SQLite, PDFKit e Foundation Models vêm do sistema. A interface combina SwiftUI com um `NSTextView` em TextKit 1 para Markdown e `PDFView` do PDFKit para PDFs, sem WebView. Os testes de chat usam um gerador controlado; o teste opcional acima faz duas perguntas ao modelo real com texto sintético e informa quando ele está indisponível. Os detalhes do fluxo de documentos, chat e persistência estão em [Arquitetura](docs/architecture.md). Para contribuir, consulte [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Resolução de problemas
 
