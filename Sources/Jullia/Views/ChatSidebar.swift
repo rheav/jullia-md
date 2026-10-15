@@ -92,6 +92,7 @@ struct ChatSidebar: View {
                 Image(systemName: "sidebar.right")
             }
             .buttonStyle(.plain)
+            .pointerStyle(.link)
             .help("Recolher painel (⌥⌘0)")
             .accessibilityLabel("Recolher painel")
             Label("No seu Mac", systemImage: "sparkles")

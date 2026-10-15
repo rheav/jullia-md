@@ -54,4 +54,39 @@ import Testing
         document.apply(RenderOptions(theme: .paper, fontSize: 22))
         #expect(document.highlightRanges[id] == moved)
     }
+
+    @Test func foldedCommentsPanelOnlyOpensForWritingOrChat() throws {
+        let suite = "dev.rheav.jullia.tests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let file = FileManager.default.temporaryDirectory.appending(path: "jullia-\(UUID().uuidString).md")
+        defer { try? FileManager.default.removeItem(at: file) }
+        try "# Notas\n\nUm trecho comentado aqui.\n".write(to: file, atomically: true, encoding: .utf8)
+        let model = AppModel(defaults: defaults, settings: AppSettings(defaults: defaults), storeURL: nil)
+        model.openFile(file)
+        let document = try #require(model.document)
+        let range = document.text.range(of: "trecho comentado")
+        document.selection = range
+        model.commentSelection()
+        document.submitComment(body: "Ver depois.", color: nil)
+        let comment = try #require(document.comments.first)
+
+        // Folded, a click on a commented passage (what both readers call) picks the tab without unfolding.
+        model.commentsCollapsed = true
+        model.inspectorTab = .chat
+        model.selectCommentsTab()
+        #expect(model.inspectorTab == .comments)
+        #expect(model.commentsCollapsed, "A click in the text does not unfold the panel")
+        #expect(comment.anchor != nil)
+
+        // Writing a comment needs the panel: it unfolds.
+        model.commentWholeDocument()
+        #expect(!model.commentsCollapsed)
+        document.composing = nil
+
+        model.commentsCollapsed = true
+        model.revealChat()
+        #expect(!model.commentsCollapsed)
+        #expect(model.inspectorTab == .chat)
+    }
 }

@@ -15,7 +15,6 @@ struct MainView: View {
     @Environment(AppModel.self) private var model
     @Environment(AppSettings.self) private var settings
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @State private var peekTimer: Task<Void, Never>?
 
     private struct RenderKey: Equatable {
         var theme: ThemeID
@@ -48,7 +47,6 @@ struct MainView: View {
                     if model.commentsCollapsed {
                         CommentsRail(document: document, theme: theme)
                             .frame(width: Layout.commentsRail)
-                            .onHover { hoverPeek($0) }
                     } else {
                         InspectorSidebar(document: document, theme: theme)
                             .frame(width: model.inspectorTab == .chat ? Layout.chatWidth : Layout.commentsWidth)
@@ -59,10 +57,8 @@ struct MainView: View {
                 .windowTint(around: commentsInsets, theme: theme, glass: settings.windowGlass)
             }
         }
-        .overlay(alignment: .topTrailing) { peekPanel(theme) }
         .animation(.smooth(duration: 0.25), value: model.filesCollapsed)
         .animation(.smooth(duration: 0.25), value: model.commentsCollapsed)
-        .animation(.smooth(duration: 0.2), value: model.commentsPeek)
         .background {
             if anyGlass {
                 BehindWindowBlur().ignoresSafeArea()
@@ -78,42 +74,10 @@ struct MainView: View {
         .onChange(of: theme.id) { applyAppearance(theme) }
         .onChange(of: RenderKey(theme: theme.id, fontSize: settings.fontSize)) { model.rerender() }
         .onChange(of: model.document?.composing) { if model.document?.composing != nil { model.revealComments() } }
-        .onExitCommand { model.dismissPeek() }
     }
 
     private var anyGlass: Bool {
         !reduceTransparency && [settings.windowGlass, settings.filesGlass, settings.commentsGlass].contains { $0.isOn }
-    }
-
-    /// The comments floated out of their folded rail, over the text.
-    @ViewBuilder
-    private func peekPanel(_ theme: Theme) -> some View {
-        if model.commentsCollapsed, model.commentsPeek != nil, let document = model.document {
-            InspectorSidebar(document: document, theme: theme)
-                .frame(width: model.inspectorTab == .chat ? Layout.chatWidth : Layout.commentsWidth)
-                .glassPanel(settings.commentsGlass, theme: theme, minimumOpacity: 1)
-                .shadow(color: .black.opacity(theme.isDark ? 0.4 : 0.15), radius: 22, x: -4, y: 8)
-                .padding(.top, Layout.topBar)
-                .padding(.bottom, PanelMetrics.gap)
-                .padding(.trailing, PanelMetrics.gap + Layout.commentsRail + 6)
-                .onHover { hoverPeek($0) }
-                .transition(.move(edge: .trailing).combined(with: .opacity))
-        }
-    }
-
-    /// Out after a moment's rest on the rail, back after a moment away — passing over it on the way elsewhere does
-    /// nothing. A pinned panel stays.
-    private func hoverPeek(_ inside: Bool) {
-        peekTimer?.cancel()
-        peekTimer = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(inside ? 120 : 220))
-            guard !Task.isCancelled else { return }
-            if inside {
-                if model.commentsPeek == nil { model.commentsPeek = .hover }
-            } else if model.commentsPeek == .hover {
-                model.commentsPeek = nil
-            }
-        }
     }
 
     /// System controls (menus, toggles, scrollers) follow the theme's lightness, whatever macOS is set to.

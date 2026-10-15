@@ -23,22 +23,13 @@ final class AppModel {
 
     /// A folded panel shrinks to a rail of icons.
     var filesCollapsed: Bool { didSet { defaults.set(filesCollapsed, forKey: "filesCollapsed") } }
-    var commentsCollapsed: Bool {
-        didSet {
-            defaults.set(commentsCollapsed, forKey: "commentsCollapsed")
-            if !commentsCollapsed { commentsPeek = nil }
-        }
-    }
-    /// The comments panel floated out of its folded rail: on hover, or held open until dismissed.
-    var commentsPeek: Peek?
+    var commentsCollapsed: Bool { didSet { defaults.set(commentsCollapsed, forKey: "commentsCollapsed") } }
     enum InspectorTab: String, CaseIterable { case comments = "Comentários", chat = "Chat com IA" }
     var inspectorTab: InspectorTab = .comments
     var fileQuery = ""
     let browser: FileBrowser
     /// The folder the browser shows when it is not under any root: scanned on its own, a few levels deep.
     private(set) var looseTree: FileNode?
-
-    enum Peek { case hover, pinned }
 
     @ObservationIgnored private var folderWatchers: [URL: FolderWatcher] = [:]
     @ObservationIgnored private var looseWatcher: FolderWatcher?
@@ -347,26 +338,24 @@ final class AppModel {
         revealComments()
     }
 
-    /// Brings the comments into view: floats them out of the rail when it is folded.
+    /// Brings the comments into view, expanding the panel: for writing a comment, which needs it.
     func revealComments() {
         inspectorTab = .comments
-        if commentsCollapsed { commentsPeek = .pinned }
+        commentsCollapsed = false
+    }
+
+    /// A click on a commented passage: the comments tab is the one shown, and a folded panel stays folded.
+    func selectCommentsTab() {
+        inspectorTab = .comments
     }
 
     func revealChat() {
         inspectorTab = .chat
         commentsCollapsed = false
-        commentsPeek = nil
     }
 
     func chatSelection() {
         guard let document, document.hasSelection else { return }
         document.startChat(on: document.selection)
-    }
-
-    /// A click in the text puts a floated-out panel away, unless a comment is being written in it.
-    func dismissPeek() {
-        guard commentsPeek != nil, document?.composing == nil else { return }
-        commentsPeek = nil
     }
 }

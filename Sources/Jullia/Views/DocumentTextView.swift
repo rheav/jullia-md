@@ -211,14 +211,13 @@ struct DocumentTextView: NSViewRepresentable {
         /// A plain click (no selection): a highlight under it gets the pill, a commented passage lights its card.
         func clicked(at location: Int?) {
             guard let textView, let document else { return }
-            AppModel.shared.dismissPeek()
             guard let location else {
                 document.activeCommentID = nil
                 return
             }
             if let comment = document.comment(at: location) {
                 document.activeCommentID = comment.id
-                AppModel.shared.revealComments()
+                AppModel.shared.selectCommentsTab()
             } else {
                 document.activeCommentID = nil
             }

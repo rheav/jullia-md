@@ -291,12 +291,11 @@ final class AnnotatedPDFView: PDFView {
             showSelectionPill()
             return
         }
-        appModel?.dismissPeek()
         if let comment = model.topLevelComments.last(where: {
             !$0.isResolved && model.commentRanges[$0.id] != nil && contains($0.anchor, point: point)
         }) {
             model.activeCommentID = comment.id
-            appModel?.revealComments()
+            appModel?.selectCommentsTab()
         } else {
             model.activeCommentID = nil
         }

@@ -101,7 +101,7 @@ struct FileRail: View {
     }
 }
 
-/// The comments folded down: expand, the open comments (floats the panel out), comment the selection.
+/// The comments folded down: expand, the open comments, comment the selection, the chat. Each expands the panel.
 struct CommentsRail: View {
     let document: DocumentModel
     let theme: Theme
@@ -113,13 +113,13 @@ struct CommentsRail: View {
             RailButton(symbol: "sidebar.right", help: "Expandir comentários (⌥⌘0)", theme: theme) {
                 model.commentsCollapsed = false
             }
+            .pointerStyle(.link)
             RailDivider(theme: theme)
             RailButton(
                 symbol: "text.bubble", help: open > 0 ? "Comentários · \(open)" : "Comentários", theme: theme,
-                count: open, active: model.commentsPeek == .pinned, tone: theme.tone(.yellow).stroke.color
+                count: open, tone: theme.tone(.yellow).stroke.color
             ) {
-                model.inspectorTab = .comments
-                model.commentsPeek = model.commentsPeek == .pinned ? nil : .pinned
+                model.revealComments()
             }
             RailButton(symbol: "plus.bubble", help: "Comentar o trecho selecionado (⌥⌘M)", theme: theme, lit: document.hasSelection) {
                 model.commentSelection()

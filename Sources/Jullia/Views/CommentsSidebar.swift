@@ -26,7 +26,8 @@ struct CommentsSidebar: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(model.commentsCollapsed ? "Fixar comentários aberto (⌥⌘0)" : "Recolher comentários (⌥⌘0)")
+                .pointerStyle(.link)
+                .help("Recolher comentários (⌥⌘0)")
                 Text("Comentários")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.heading.color)
