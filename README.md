@@ -6,9 +6,17 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.5.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.6.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.6.0
+
+- Sidebar de arquivos reorganizada: mostra uma pasta por vez, como árvore, começando pela pasta do documento aberto.
+- Breadcrumb para subir de nível e **Entrar na pasta** (duplo clique) para focar uma subpasta.
+- Seção **Locais** com as pastas abertas e os **Recentes**; pastas de arquivos soltos podem ser adicionadas aos Locais.
+- Busca em todas as pastas, com o caminho de cada resultado, e ordenação por nome ou data de modificação.
+- Nomes longos quebram em duas linhas em vez de perder o meio.
 
 ## Novidades da versão 0.5.0
 
@@ -23,7 +31,7 @@ O banco local é atualizado automaticamente na primeira abertura, preservando os
 
 - **Ler Markdown com controles nativos:** títulos, listas, tarefas, tabelas, citações, blocos de código, links e imagens locais.
 - **Ler e anotar PDFs:** páginas e zoom nativos, destaques em seis cores e comentários vinculados a trechos, inclusive entre páginas.
-- **Navegar por pastas:** árvore de arquivos, busca por nome, documentos recentes e contadores de anotações.
+- **Navegar por pastas:** uma pasta por vez em árvore, a partir do documento aberto, com breadcrumb, busca em todas as pastas, ordenação por nome ou data, recentes e contadores de anotações.
 - **Destacar em seis cores:** amarelo, verde, azul, rosa, roxo e laranja, com uma barra flutuante sobre a seleção.
 - **Comentar trechos ou o documento inteiro:** responder, editar, resolver, reabrir e escolher a cor de cada conversa.
 - **Conversar sobre um trecho com IA:** selecione texto no Markdown ou PDF, converse com o modelo local da Apple Intelligence e salve respostas como anotações identificadas como IA.
@@ -85,7 +93,9 @@ Use **⌘O** para abrir arquivos ou **⇧⌘O** para adicionar uma pasta. També
 
 Para experimentar, abra a pasta [`examples`](examples) e selecione [`Boas-vindas.md`](examples/Boas-vindas.md). Os textos de demonstração vêm sem anotações; os comentários das imagens são criados pelo gerador de screenshots.
 
-A árvore reconhece `.md`, `.markdown`, `.mdown`, `.mkd` e `.pdf`, ignora arquivos ocultos e links simbólicos e omite pastas sem Markdown ou PDF. Diretórios de build e dependências, como `node_modules`, `.build`, `build`, `dist`, `DerivedData` e `Pods`, ficam fora da navegação. A busca filtra nomes de arquivos, sem diferenciar maiúsculas ou acentos.
+A árvore reconhece `.md`, `.markdown`, `.mdown`, `.mkd` e `.pdf`, ignora arquivos ocultos e links simbólicos e omite pastas sem Markdown ou PDF. Diretórios de build e dependências, como `node_modules`, `.build`, `build`, `dist`, `DerivedData` e `Pods`, ficam fora da navegação. A busca procura nomes de arquivos em todas as pastas, sem diferenciar maiúsculas ou acentos, e mostra onde cada resultado está.
+
+A sidebar mostra uma pasta por vez. Ao abrir um documento, ela vai para a pasta dele, ou abre o caminho até ele se o arquivo estiver dentro da pasta mostrada. Clique numa subpasta para abri-la no lugar; dê duplo clique (ou use **Entrar na pasta**) para que ela vire o topo da árvore. O breadcrumb sobe de volta até a pasta adicionada, nunca acima dela. Um arquivo aberto fora dessas pastas mostra a própria pasta, até quatro níveis abaixo, com o botão **⊕** para adicioná-la aos **Locais**. O botão **⇅** ordena por nome ou por data de modificação (mais recentes primeiro); as pastas vêm sempre antes dos arquivos.
 
 ### Destacar e comentar
 

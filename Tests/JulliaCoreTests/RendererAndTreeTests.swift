@@ -98,4 +98,40 @@ import Testing
         #expect(filtered?.files.map(\.name) == ["c.md"])
         #expect(FileTree.filter(tree, query: "nada") == nil)
     }
+
+    @Test func sortsFindsNodesFlattensAndSearches() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "jullia-tree-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let fm = FileManager.default
+        try fm.createDirectory(at: root.appending(path: "Curso/Bônus"), withIntermediateDirectories: true)
+        let files = ["a-old.pdf", "b-new.md", "Curso/Aula.pdf", "Curso/Bônus/Extra.md"]
+        for (index, file) in files.enumerated() {
+            let url = root.appending(path: file)
+            try "x".write(to: url, atomically: true, encoding: .utf8)
+            try fm.setAttributes([.modificationDate: Date(timeIntervalSince1970: 1_000_000 + Double(index) * 100)], ofItemAtPath: url.path)
+        }
+
+        let tree = FileTree.scan(root)
+        #expect(tree.children?.map(\.name) == ["Curso", "a-old.pdf", "b-new.md"])
+        let byDate = FileTree.sorted(tree, by: .date)
+        #expect(byDate.children?.map(\.name) == ["Curso", "b-new.md", "a-old.pdf"], "Folders first, then newest files")
+
+        let curso = try #require(FileTree.node(at: root.appending(path: "Curso"), in: tree))
+        #expect(curso.children?.map(\.name) == ["Bônus", "Aula.pdf"])
+        #expect(FileTree.node(at: root.appending(path: "Nada"), in: tree) == nil)
+
+        #expect(FileTree.rows(tree, expanded: []).map(\.node.name) == ["Curso", "a-old.pdf", "b-new.md"])
+        let expanded: Set<URL> = [root.appending(path: "Curso").standardizedFileURL, root.appending(path: "Curso/Bônus").standardizedFileURL]
+        let rows = FileTree.rows(tree, expanded: expanded)
+        #expect(rows.map(\.node.name) == ["Curso", "Bônus", "Extra.md", "Aula.pdf", "a-old.pdf", "b-new.md"])
+        #expect(rows.map(\.depth) == [0, 1, 2, 1, 0, 0])
+
+        #expect(FileTree.search([tree], query: "AULA").map(\.name) == ["Aula.pdf"])
+        #expect(FileTree.search([tree, tree], query: "extra").count == 1, "The same file is listed once")
+        #expect(FileTree.search([tree], query: ".", limit: 2).count == 2)
+        #expect(FileTree.search([tree], query: "  ").isEmpty)
+        #expect(FileTree.scan(root, maxDepth: 1).children?.map(\.name) == ["a-old.pdf", "b-new.md"], "Folders past the depth are left out")
+        #expect(FileTree.isWithin(root.appending(path: "Curso/Aula.pdf"), root))
+        #expect(!FileTree.isWithin(URL(fileURLWithPath: root.path + "-other"), root))
+    }
 }

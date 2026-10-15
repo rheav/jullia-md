@@ -31,12 +31,18 @@ final class AppModel {
     enum InspectorTab: String, CaseIterable { case comments = "Comentários", chat = "Chat com IA" }
     var inspectorTab: InspectorTab = .comments
     var fileQuery = ""
+    let browser: FileBrowser
+    /// The folder the browser shows when it is not under any root: scanned on its own, a few levels deep.
+    private(set) var looseTree: FileNode?
 
     enum Peek { case hover, pinned }
 
     @ObservationIgnored private var folderWatchers: [URL: FolderWatcher] = [:]
+    @ObservationIgnored private var looseWatcher: FolderWatcher?
     @ObservationIgnored private let defaults: UserDefaults
     static let maxRecents = 8
+    /// How deep a folder outside the roots is scanned: enough for a course folder, not a whole home folder.
+    static let looseDepth = 4
 
     init(
         defaults: UserDefaults = .standard,
@@ -47,6 +53,7 @@ final class AppModel {
         self.settings = settings
         filesCollapsed = defaults.bool(forKey: "filesCollapsed")
         commentsCollapsed = defaults.bool(forKey: "commentsCollapsed")
+        browser = FileBrowser(defaults: defaults)
         do {
             store = try AnnotationStore(url: storeURL)
         } catch {
@@ -66,6 +73,9 @@ final class AppModel {
                 openFile(URL(fileURLWithPath: last))
             }
         }
+        browser.onFolderChange = { [weak self] in self?.syncLooseFolder() }
+        if browser.folder == nil { browser.show(roots.first?.url) }
+        syncLooseFolder()
     }
 
     var renderOptions: RenderOptions {
@@ -94,6 +104,7 @@ final class AppModel {
         document.watch { [weak self] in self?.settings.liveReload ?? false }
         self.document = document
         document.apply(renderOptions)
+        browser.reveal(url)
 
         recents.removeAll { $0 == url }
         recents.insert(url, at: 0)
@@ -128,18 +139,30 @@ final class AppModel {
 
     // MARK: Folders
 
+    /// Adds a folder to the sidebar's roots. Added by hand, it is also shown.
     func addFolder(_ url: URL, persist: Bool = true) {
         let url = url.standardizedFileURL
-        guard !roots.contains(where: { $0.url == url }) else { return }
+        guard !roots.contains(where: { $0.url == url }) else {
+            if persist { browser.show(url) }
+            return
+        }
         roots.append(FileTree.scan(url))
         folderWatchers[url] = FolderWatcher(url: url) { [weak self] in self?.rescan(url) }
-        if persist { saveFolders() }
+        if persist {
+            saveFolders()
+            browser.show(url)
+        }
+        syncLooseFolder()
     }
 
     func removeFolder(_ url: URL) {
         roots.removeAll { $0.url == url }
         folderWatchers[url] = nil
         saveFolders()
+        if let folder = browser.folder, FileTree.isWithin(folder, url) {
+            browser.show(document?.url.deletingLastPathComponent() ?? roots.first?.url)
+        }
+        syncLooseFolder()
     }
 
     func rescan(_ url: URL) {
@@ -150,7 +173,52 @@ final class AppModel {
 
     func rescanAll() {
         roots.map(\.url).forEach(rescan)
+        rescanLoose()
         refreshCounts()
+    }
+
+    /// The root the folder or file sits in, the innermost one if roots are nested.
+    func root(containing url: URL) -> FileNode? {
+        roots.filter { FileTree.isWithin(url, $0.url) }.max { $0.url.path.count < $1.url.path.count }
+    }
+
+    /// The tree the browser shows, in the chosen order.
+    var browserTree: FileNode? {
+        guard let folder = browser.folder else { return nil }
+        let tree = root(containing: folder).flatMap { FileTree.node(at: folder, in: $0) } ?? looseTree
+        return tree.map { FileTree.sorted($0, by: browser.sort) }
+    }
+
+    /// Whether the folder shown is outside every root.
+    var browsingLooseFolder: Bool { looseTree != nil }
+
+    /// Every file the search can find: the roots, and the folder shown when it is outside them.
+    var searchableTrees: [FileNode] { roots + (looseTree.map { [$0] } ?? []) }
+
+    /// Scans the folder shown when no root has it, and watches it; drops that scan when a root covers it.
+    private func syncLooseFolder() {
+        guard let folder = browser.folder else { return dropLoose() }
+        if let root = root(containing: folder), FileTree.node(at: folder, in: root) != nil { return dropLoose() }
+        guard FileManager.default.fileExists(atPath: folder.path) else {
+            dropLoose()
+            if let first = roots.first?.url, first != folder { browser.show(first) }
+            return
+        }
+        if looseTree?.url.standardizedFileURL != folder {
+            looseTree = FileTree.scan(folder, maxDepth: Self.looseDepth)
+            looseWatcher = FolderWatcher(url: folder) { [weak self] in self?.rescanLoose() }
+        }
+    }
+
+    private func rescanLoose() {
+        guard let url = looseTree?.url else { return }
+        let fresh = FileTree.scan(url, maxDepth: Self.looseDepth)
+        if fresh != looseTree { looseTree = fresh }
+    }
+
+    private func dropLoose() {
+        looseTree = nil
+        looseWatcher = nil
     }
 
     private func saveFolders() {
