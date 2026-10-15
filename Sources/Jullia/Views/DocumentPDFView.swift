@@ -157,6 +157,11 @@ final class AnnotatedPDFView: PDFView {
         if self.theme.id != theme.id { hidePill() }
         self.theme = theme
         backgroundColor = seeThrough ? .clear : theme.background.ns
+        // PDFKit's inner scroll view paints its own gray behind a clear background; it has to stop too.
+        if let scrollView = subviews.lazy.compactMap({ $0 as? NSScrollView }).first {
+            scrollView.drawsBackground = !seeThrough
+            scrollView.contentView.drawsBackground = !seeThrough
+        }
         if document !== model.pdfDocument {
             let firstAttach = document == nil
             let previousPage = currentPage.flatMap { document?.index(for: $0) } ?? 0

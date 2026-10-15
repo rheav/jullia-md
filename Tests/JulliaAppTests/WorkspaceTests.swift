@@ -369,4 +369,28 @@ import Testing
         model.closeFocusedTab()
         #expect(!model.zen)
     }
+
+    @Test func zenLetsTheWindowGlassShowAroundPDFPages() throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).pdf")
+        defer { try? FileManager.default.removeItem(at: file) }
+        try PDFTests.writePDF(["Página"], to: file)
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (app, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        app.openFile(file)
+        let model = try #require(app.document)
+        _ = NSApplication.shared
+        let view = AnnotatedPDFView(frame: CGRect(x: 0, y: 0, width: 600, height: 700))
+        defer { view.tearDown() }
+        let scroll = try #require(view.subviews.compactMap { $0 as? NSScrollView }.first)
+
+        view.update(model: model, theme: .polar, appModel: app, seeThrough: true)
+        #expect(view.backgroundColor.alphaComponent == 0)
+        #expect(!scroll.drawsBackground, "PDFKit's own gray would cover the glass")
+        #expect(!scroll.contentView.drawsBackground)
+
+        view.update(model: model, theme: .polar, appModel: app, seeThrough: false)
+        #expect(view.backgroundColor.alphaComponent == 1)
+        #expect(scroll.drawsBackground)
+    }
 }
