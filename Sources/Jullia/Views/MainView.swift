@@ -1,3 +1,4 @@
+import AppKit
 import JulliaCore
 import SwiftUI
 
@@ -25,6 +26,8 @@ struct MainView: View {
         let theme = settings.theme
         let filesInsets = EdgeInsets(top: Layout.topBar, leading: PanelMetrics.gap, bottom: PanelMetrics.gap, trailing: 0)
         let commentsInsets = EdgeInsets(top: Layout.topBar, leading: 0, bottom: PanelMetrics.gap, trailing: PanelMetrics.gap)
+        let zen = model.zen
+        let windowGlass = settings.windowGlass
 
         HStack(spacing: 0) {
             Group {
@@ -36,11 +39,12 @@ struct MainView: View {
             }
             .glassPanel(settings.filesGlass, theme: theme)
             .padding(filesInsets)
-            .windowTint(around: filesInsets, theme: theme, glass: settings.windowGlass)
+            .windowTint(around: filesInsets, theme: theme, glass: windowGlass)
+            .zenHidden(zen, alignment: .leading)
 
             DocumentColumn(theme: theme)
                 .frame(minWidth: 420, maxWidth: .infinity)
-                .windowTint(around: EdgeInsets(), theme: theme, glass: settings.windowGlass)
+                .windowTint(around: EdgeInsets(), theme: theme, glass: windowGlass)
 
             if let document = model.document {
                 Group {
@@ -54,11 +58,31 @@ struct MainView: View {
                 }
                 .glassPanel(settings.commentsGlass, theme: theme)
                 .padding(commentsInsets)
-                .windowTint(around: commentsInsets, theme: theme, glass: settings.windowGlass)
+                .windowTint(around: commentsInsets, theme: theme, glass: windowGlass)
+                .zenHidden(zen, alignment: .trailing)
             }
         }
         .animation(.smooth(duration: 0.25), value: model.filesCollapsed)
         .animation(.smooth(duration: 0.25), value: model.commentsCollapsed)
+        .animation(.smooth(duration: 0.3), value: zen)
+        .overlay(alignment: .top) {
+            if model.zenHint {
+                ZenHint(theme: theme)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: model.zenHint)
+        .overlay(alignment: .topTrailing) {
+            if zen {
+                ZenExitButton(theme: theme)
+                    .padding(.top, 10)
+                    .padding(.trailing, 12)
+                    .transition(.opacity)
+            }
+        }
+        .background {
+            if zen { ZenEscapeMonitor { model.setZen(false) } }
+        }
         .background {
             if anyGlass {
                 BehindWindowBlur().ignoresSafeArea()
@@ -66,7 +90,7 @@ struct MainView: View {
                 theme.background.color.ignoresSafeArea()
             }
         }
-        .background(WindowConfigurator())
+        .background(WindowConfigurator(hidesButtons: zen))
         .ignoresSafeArea()
         .tint(theme.accent.color)
         .frame(minWidth: 760, minHeight: 480)
@@ -94,7 +118,10 @@ struct DocumentColumn: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            topBar
+            if !model.zen {
+                topBar
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
             if model.workspace.tabs.isEmpty {
                 EmptyState(theme: theme)
             } else {
@@ -108,6 +135,7 @@ struct DocumentColumn: View {
             if !model.workspace.tabs.isEmpty {
                 TabBar(theme: theme)
                 LayoutPicker(theme: theme)
+                ZenButton(theme: theme)
             }
             Spacer(minLength: 0)
         }
@@ -121,6 +149,135 @@ struct DocumentColumn: View {
         .background {
             Color.clear.contentShape(Rectangle()).gesture(WindowDragGesture())
         }
+    }
+}
+
+/// Into zen from the top strip; Esc or ⌃⌘Z brings everything back.
+private struct ZenButton: View {
+    let theme: Theme
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Button {
+            model.toggleZen()
+        } label: {
+            Image(systemName: "viewfinder")
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 26, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(theme.secondaryText.color)
+        .pointerStyle(.link)
+        .help("Modo zen: só os documentos (⌃⌘Z)")
+    }
+}
+
+/// Zen's one control: the way back, quiet until the pointer is on it.
+private struct ZenExitButton: View {
+    let theme: Theme
+    @Environment(AppModel.self) private var model
+    @State private var hovering = false
+
+    var body: some View {
+        Button {
+            model.setZen(false)
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(hovering ? theme.heading.color : theme.secondaryText.color)
+                .frame(width: 28, height: 28)
+                .background(theme.surface.color.opacity(hovering ? 0.95 : 0.6), in: Circle())
+                .overlay { Circle().strokeBorder(theme.rule.color, lineWidth: 1) }
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .opacity(hovering ? 1 : 0.55)
+        .onHover { hovering = $0 }
+        .pointerStyle(.link)
+        .help("Sair do modo zen (Esc ou ⌃⌘Z)")
+        .accessibilityLabel("Sair do modo zen")
+    }
+}
+
+/// Esc leaves zen from anywhere in this window, even while the PDF or the text has the keyboard: a menu shortcut
+/// cannot carry a bare Esc, and those views take it before SwiftUI sees it. Other windows and modal panels keep
+/// their own Esc.
+private struct ZenEscapeMonitor: NSViewRepresentable {
+    let onEscape: @MainActor () -> Void
+
+    func makeNSView(context: Context) -> MonitorView {
+        let view = MonitorView()
+        view.onEscape = onEscape
+        return view
+    }
+
+    func updateNSView(_ view: MonitorView, context: Context) {
+        view.onEscape = onEscape
+    }
+
+    static func dismantleNSView(_ view: MonitorView, coordinator: ()) {
+        view.stop()
+    }
+
+    final class MonitorView: NSView {
+        var onEscape: @MainActor () -> Void = {}
+        private var monitor: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            stop()
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard event.keyCode == 53, event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty
+                else { return event }
+                let eventWindow = event.window
+                let handled = MainActor.assumeIsolated { () -> Bool in
+                    guard let self, let window = self.window, eventWindow === window,
+                          NSApp.modalWindow == nil, window.attachedSheet == nil else { return false }
+                    self.onEscape()
+                    return true
+                }
+                return handled ? nil : event
+            }
+        }
+
+        func stop() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+        }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    }
+}
+
+/// The note shown for a moment when zen starts: the only way out is not on screen.
+private struct ZenHint: View {
+    let theme: Theme
+
+    var body: some View {
+        Text("Modo zen · Esc para sair")
+            .font(.system(size: 12.5, weight: .medium))
+            .foregroundStyle(theme.text.color)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(theme.surface.color.opacity(0.94), in: Capsule())
+            .overlay { Capsule().strokeBorder(theme.rule.color, lineWidth: 1) }
+            .shadow(color: .black.opacity(theme.isDark ? 0.35 : 0.12), radius: 14, y: 4)
+            .padding(.top, 18)
+            .allowsHitTesting(false)
+    }
+}
+
+extension View {
+    /// Out of sight in zen but kept alive, so a draft, a list's scroll or the chat tab are where they were when zen
+    /// ends.
+    func zenHidden(_ hidden: Bool, alignment: Alignment) -> some View {
+        frame(width: hidden ? 0 : nil, alignment: alignment)
+            .clipped()
+            .opacity(hidden ? 0 : 1)
+            .allowsHitTesting(!hidden)
+            .accessibilityHidden(hidden)
     }
 }
 

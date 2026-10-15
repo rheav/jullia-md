@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.9.1**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.10.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.10.0
+
+- **Modo zen**: só os documentos na tela, um ou vários lado a lado, sem sidebars, abas, cabeçalhos, barra do PDF nem botões da janela; a transparência continua. Entra pelo botão ao lado do layout ou por **⌃⌘Z**; sai com **Esc**, **⌃⌘Z** ou o ✕ discreto no canto.
 
 ## Novidades da versão 0.9.0
 
@@ -128,6 +132,12 @@ Clique em qualquer ponto de um painel para focá-lo: o painel focado tem o núme
 
 Também dá para arrastar um arquivo da sidebar até a área de leitura: o destaque verde mostra onde ele vai entrar. No meio de um painel, o arquivo substitui o que está nele (a aba anterior continua na barra); na metade esquerda ou direita, abre num painel novo daquele lado, até quatro. Com quatro painéis, ou na grade, o painel inteiro é o destino. Um arquivo que já está num painel não é duplicado: o painel dele é focado. O ✕ do cabeçalho fecha o painel, não a aba. Um mesmo arquivo aparece em um painel por vez.
 
+### Modo zen
+
+O botão de visor no fim da barra de abas, o menu **View → Modo zen** ou **⌃⌘Z** deixam na tela só os documentos: somem as sidebars, as barras recolhidas, as abas, o seletor de layout, os cabeçalhos dos painéis, a barra do PDF e os botões da janela. A transparência da janela continua como nos Ajustes e aparece em volta das páginas do PDF. No modo lado a lado, uma linha fina continua separando os painéis e ainda pode ser arrastada. Para sair, use **Esc**, **⌃⌘Z** ou o ✕ discreto no canto superior direito, que acende sob o ponteiro; um aviso lembra disso por dois segundos ao entrar.
+
+Destacar, copiar, zoom e a troca de abas por atalho continuam funcionando. **Comentar** e **Conversar sobre trecho** saem do zen e abrem o painel. Ao sair, tudo volta como estava, inclusive um comentário ou pergunta em edição. O app sempre abre fora do zen.
+
 ### Destacar e comentar
 
 Selecione um trecho para abrir a barra de marcação. Escolha uma cor para destacar, o balão para comentar ou o botão de cópia para copiar o texto. O menu contextual também oferece essas ações. Clique em um destaque existente para mudar sua cor ou removê-lo.
@@ -203,6 +213,7 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior |
 | ⌘1 … ⌘8 / ⌘9 | Ir para a aba N / para a última aba |
 | ⌥⌘1 … ⌥⌘5 | Um painel / 2, 3 ou 4 colunas / grade 2×2 |
+| ⌃⌘Z | Entrar ou sair do modo zen |
 | ⇧⌘H | Destacar a seleção com a última cor usada |
 | ⌥⌘M | Comentar a seleção; sem seleção, comentar o documento |
 | ⌥⌘I | Conversar sobre o trecho selecionado com IA |
@@ -213,7 +224,7 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌘0 | Restaurar o texto para 16 pt; em PDF, ajustar à janela |
 | ⌘, | Abrir ajustes |
 | ⌘↩ | Enviar o comentário em edição ou a pergunta no chat |
-| Esc | Cancelar a edição de comentário |
+| Esc | Cancelar a edição de comentário; no modo zen, sair dele |
 
 ## Seus dados
 

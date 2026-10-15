@@ -15,8 +15,11 @@ struct BehindWindowBlur: NSViewRepresentable {
     func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
 
-/// Lets the window itself be see-through, so the blur can show the desktop.
+/// Lets the window itself be see-through, so the blur can show the desktop. In zen, also hides the close, minimize
+/// and zoom buttons.
 struct WindowConfigurator: NSViewRepresentable {
+    var hidesButtons = false
+
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
         DispatchQueue.main.async {
@@ -25,11 +28,24 @@ struct WindowConfigurator: NSViewRepresentable {
             window.backgroundColor = .clear
             window.titlebarAppearsTransparent = true
             window.styleMask.insert(.fullSizeContentView)
+            Self.showButtons(of: window, !hidesButtons)
         }
         return view
     }
 
-    func updateNSView(_ view: NSView, context: Context) {}
+    func updateNSView(_ view: NSView, context: Context) {
+        let hidden = hidesButtons
+        DispatchQueue.main.async {
+            guard let window = view.window else { return }
+            Self.showButtons(of: window, !hidden)
+        }
+    }
+
+    private static func showButtons(of window: NSWindow, _ shown: Bool) {
+        for type in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            window.standardWindowButton(type)?.isHidden = !shown
+        }
+    }
 }
 
 /// A rectangle with a rounded hole: the window's tint around a panel, so the panel sits straight on the blur and its

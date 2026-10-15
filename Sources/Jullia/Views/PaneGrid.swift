@@ -155,7 +155,7 @@ struct PaneView: View {
         if let index = workspace.panes.firstIndex(where: { $0.id == paneID }) {
             let tab = workspace.tab(workspace.panes[index].tabID)
             VStack(spacing: 0) {
-                if workspace.panes.count > 1 {
+                if workspace.panes.count > 1, !model.zen {
                     PaneHeader(index: index, tab: tab, focused: workspace.focusedPane == index, theme: theme)
                 }
                 if let document = tab?.document {

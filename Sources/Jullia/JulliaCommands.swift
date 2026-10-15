@@ -77,8 +77,13 @@ struct JulliaCommands: Commands {
         CommandGroup(after: .sidebar) {
             Button(model.filesCollapsed ? "Expandir arquivos" : "Recolher arquivos") { model.filesCollapsed.toggle() }
                 .keyboardShortcut("s", modifiers: [.command, .control])
+                .disabled(model.zen)
             Button(model.commentsCollapsed ? "Expandir comentários" : "Recolher comentários") { model.commentsCollapsed.toggle() }
                 .keyboardShortcut("0", modifiers: [.command, .option])
+                .disabled(model.zen)
+            Button(model.zen ? "Sair do modo zen" : "Modo zen") { model.toggleZen() }
+                .keyboardShortcut("z", modifiers: [.command, .control])
+                .disabled(!model.canZen)
             Divider()
             Menu("Tema") {
                 ForEach(Array(ThemeID.allCases.enumerated()), id: \.element) { index, id in

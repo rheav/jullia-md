@@ -25,30 +25,37 @@ struct PDFReader: View {
             .foregroundStyle(theme.text.color)
         } else {
             VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    Text("Página \(document.pdfPageNumber) de \(document.pdfDocument?.pageCount ?? 0)")
-                        .monospacedDigit()
-                    Spacer()
-                    Button { document.zoomPDF(-1) } label: { Image(systemName: "minus.magnifyingglass") }
-                        .help("Diminuir zoom (⌘−)")
-                    Button("Ajustar") { document.zoomPDF(0) }.help("Ajustar à janela (⌘0)")
-                    Button { document.zoomPDF(1) } label: { Image(systemName: "plus.magnifyingglass") }
-                        .help("Aumentar zoom (⌘+)")
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 12))
+                if !model.zen { toolbar }
+                // In zen the space around the pages is the window's glass, as nothing else is left on screen.
+                DocumentPDFView(document: document, theme: theme, appModel: model, seeThrough: model.zen)
+            }
+        }
+    }
+
+    /// The page number, zoom, and a note when the PDF has no text. Not in zen.
+    @ViewBuilder
+    private var toolbar: some View {
+        HStack(spacing: 12) {
+            Text("Página \(document.pdfPageNumber) de \(document.pdfDocument?.pageCount ?? 0)")
+                .monospacedDigit()
+            Spacer()
+            Button { document.zoomPDF(-1) } label: { Image(systemName: "minus.magnifyingglass") }
+                .help("Diminuir zoom (⌘−)")
+            Button("Ajustar") { document.zoomPDF(0) }.help("Ajustar à janela (⌘0)")
+            Button { document.zoomPDF(1) } label: { Image(systemName: "plus.magnifyingglass") }
+                .help("Aumentar zoom (⌘+)")
+        }
+        .buttonStyle(.plain)
+        .font(.system(size: 12))
+        .foregroundStyle(theme.secondaryText.color)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        if !document.hasPDFText {
+            Text("Este PDF não tem texto selecionável. Você pode comentar o documento inteiro.")
+                .font(.caption)
                 .foregroundStyle(theme.secondaryText.color)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                if !document.hasPDFText {
-                    Text("Este PDF não tem texto selecionável. Você pode comentar o documento inteiro.")
-                        .font(.caption)
-                        .foregroundStyle(theme.secondaryText.color)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                }
-                DocumentPDFView(document: document, theme: theme, appModel: model)
-            }
+                .padding(.bottom, 8)
         }
     }
 
@@ -62,6 +69,8 @@ struct DocumentPDFView: NSViewRepresentable {
     let document: DocumentModel
     let theme: Theme
     let appModel: AppModel
+    /// The area around the pages lets the window's tint and blur through instead of painting the theme background.
+    var seeThrough = false
 
     func makeNSView(context: Context) -> AnnotatedPDFView {
         let view = AnnotatedPDFView()
@@ -75,7 +84,7 @@ struct DocumentPDFView: NSViewRepresentable {
     }
 
     func updateNSView(_ view: AnnotatedPDFView, context: Context) {
-        view.update(model: document, theme: theme, appModel: appModel)
+        view.update(model: document, theme: theme, appModel: appModel, seeThrough: seeThrough)
     }
 
     static func dismantleNSView(_ view: AnnotatedPDFView, coordinator: ()) {
@@ -140,14 +149,14 @@ final class AnnotatedPDFView: PDFView {
         document = nil
     }
 
-    func update(model: DocumentModel, theme: Theme, appModel: AppModel) {
+    func update(model: DocumentModel, theme: Theme, appModel: AppModel, seeThrough: Bool = false) {
         updating = true
         defer { updating = false }
         self.model = model
         self.appModel = appModel
         if self.theme.id != theme.id { hidePill() }
         self.theme = theme
-        backgroundColor = theme.background.ns
+        backgroundColor = seeThrough ? .clear : theme.background.ns
         if document !== model.pdfDocument {
             let firstAttach = document == nil
             let previousPage = currentPage.flatMap { document?.index(for: $0) } ?? 0

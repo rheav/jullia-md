@@ -324,4 +324,49 @@ import Testing
         #expect(view.side(at: NSPoint(x: 280, y: 200)) == .center, "No room for another pane: the whole pane is the target")
         #expect(view.registeredDraggedTypes.contains(.fileURL))
     }
+
+    @Test func zenShowsOnlyTheDocumentsAndCommentingOrChatLeavesIt() async throws {
+        let (folder, files) = try makeFiles(["a.md", "b.md"])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (model, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        model.toggleZen()
+        #expect(!model.zen, "Nothing open: nothing for zen to show")
+
+        model.openFile(files[0], as: .permanent)
+        model.toggleZen()
+        #expect(model.zen)
+        #expect(model.zenHint, "The way out is announced")
+        model.toggleZen()
+        #expect(!model.zen)
+        #expect(!model.zenHint)
+
+        // Writing a comment needs the panel: zen ends and the panel opens.
+        model.commentsCollapsed = true
+        model.setZen(true)
+        model.commentWholeDocument()
+        #expect(!model.zen)
+        #expect(!model.commentsCollapsed)
+        model.document?.composing = nil
+
+        model.setZen(true)
+        model.revealChat()
+        #expect(!model.zen)
+
+        // A click on a commented passage does not end it.
+        model.setZen(true)
+        model.selectCommentsTab()
+        #expect(model.zen)
+
+        // Not saved: the next launch opens in the normal view.
+        model.prepareToQuit()
+        let (reopened, _) = try makeModel(suite)
+        #expect(!reopened.zen)
+
+        // Closing the last tab ends it.
+        model.closeFocusedTab()
+        #expect(!model.zen)
+    }
 }

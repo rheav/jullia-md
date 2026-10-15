@@ -27,6 +27,12 @@ final class AppModel {
     enum InspectorTab: String, CaseIterable { case comments = "Comentários", chat = "Chat com IA" }
     var inspectorTab: InspectorTab = .comments
     var fileQuery = ""
+    /// Zen: only the documents on screen — no panels, rails, tabs, pane headers or window buttons. Not saved: the
+    /// app always opens in the normal view.
+    private(set) var zen = false
+    /// The "Esc to leave" note, shown for a moment after zen starts.
+    private(set) var zenHint = false
+    @ObservationIgnored private var zenHintTimer: Task<Void, Never>?
     let browser: FileBrowser
     /// The folder the browser shows when it is not under any root: scanned on its own, a few levels deep.
     private(set) var looseTree: FileNode?
@@ -176,6 +182,7 @@ final class AppModel {
     // MARK: Session
 
     private func workspaceChanged() {
+        if workspace.tabs.isEmpty { setZen(false) }
         if let url = document?.url, url != revealed {
             revealed = url
             browser.reveal(url)
@@ -338,8 +345,9 @@ final class AppModel {
         revealComments()
     }
 
-    /// Brings the comments into view, expanding the panel: for writing a comment, which needs it.
+    /// Brings the comments into view, expanding the panel: for writing a comment, which needs it. Leaves zen.
     func revealComments() {
+        setZen(false)
         inspectorTab = .comments
         commentsCollapsed = false
     }
@@ -350,8 +358,32 @@ final class AppModel {
     }
 
     func revealChat() {
+        setZen(false)
         inspectorTab = .chat
         commentsCollapsed = false
+    }
+
+    // MARK: Zen
+
+    /// Zen needs something to show.
+    var canZen: Bool { !workspace.tabs.isEmpty }
+
+    func toggleZen() {
+        setZen(!zen)
+    }
+
+    func setZen(_ on: Bool) {
+        let on = on && canZen
+        guard on != zen else { return }
+        zen = on
+        zenHintTimer?.cancel()
+        zenHint = on
+        guard on else { return }
+        zenHintTimer = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2.2))
+            guard !Task.isCancelled else { return }
+            self?.zenHint = false
+        }
     }
 
     func chatSelection() {
