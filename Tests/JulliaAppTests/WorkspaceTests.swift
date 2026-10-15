@@ -268,4 +268,60 @@ import Testing
         #expect(!wide.fitsPane, "Zooming stops the fitting")
         #expect(wide.scaleFactor > 1)
     }
+
+    @Test func droppingAFileOnAPaneOpensItThereOrBesideIt() throws {
+        let (folder, files) = try makeFiles(["a.md", "b.md", "c.md", "d.md", "e.md", "f.md"])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (model, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let workspace = model.workspace
+        func shown() -> [String?] { workspace.panes.map { workspace.tab($0.tabID)?.name } }
+
+        model.openFile(files[0])
+        model.beginFileDrag(files[1])
+        #expect(model.draggedFile == files[1], "The panes show drop targets while a file is dragged")
+        model.dropFile(files[1], on: 0, side: .trailing)
+        #expect(model.draggedFile == nil)
+        #expect(workspace.layout == .two)
+        #expect(shown() == ["a.md", "b.md"])
+        #expect(workspace.focusedPane == 1)
+        #expect(workspace.tabs.allSatisfy { !$0.isPreview || $0.name == "a.md" }, "A dropped file is kept")
+
+        model.dropFile(files[2], on: 0, side: .leading)
+        #expect(shown() == ["c.md", "a.md", "b.md"])
+        #expect(workspace.focusedPane == 0)
+
+        model.dropFile(files[3], on: 1, side: .center)
+        #expect(shown() == ["c.md", "d.md", "b.md"], "The center replaces the pane's file; its tab stays in the bar")
+        #expect(workspace.tab(for: files[0]) != nil)
+
+        model.dropFile(files[4], on: 2, side: .trailing)
+        #expect(workspace.layout == .four)
+        model.dropFile(files[5], on: 3, side: .trailing)
+        #expect(workspace.panes.count == 4, "With four panes a side drop replaces the file")
+        #expect(shown() == ["c.md", "d.md", "b.md", "f.md"])
+
+        // A file already on screen is not shown twice: its pane is focused.
+        model.dropFile(files[2], on: 3, side: .center)
+        #expect(shown() == ["c.md", "d.md", "b.md", "f.md"])
+        #expect(workspace.focusedPane == 0)
+
+        let note = folder.appending(path: "notas.txt")
+        try "x".write(to: note, atomically: true, encoding: .utf8)
+        let before = workspace.tabs.count
+        model.dropFile(note, on: 0, side: .center)
+        #expect(workspace.tabs.count == before, "Only Markdown and PDF files open")
+    }
+
+    @Test func dropTargetZones() {
+        let view = DropTargetView(frame: NSRect(x: 0, y: 0, width: 300, height: 400))
+        #expect(view.side(at: NSPoint(x: 20, y: 200)) == .leading)
+        #expect(view.side(at: NSPoint(x: 150, y: 200)) == .center)
+        #expect(view.side(at: NSPoint(x: 280, y: 200)) == .trailing)
+        #expect(view.rect(for: .trailing).minX >= 150)
+        view.allowsSides = false
+        #expect(view.side(at: NSPoint(x: 280, y: 200)) == .center, "No room for another pane: the whole pane is the target")
+        #expect(view.registeredDraggedTypes.contains(.fileURL))
+    }
 }

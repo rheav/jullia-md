@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.8.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.9.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.9.0
+
+- **Arrastar para o lado**: arraste um arquivo da sidebar para a área de leitura. Solto no meio de um painel, abre nele; solto na metade esquerda ou direita, abre num painel novo daquele lado.
 
 ## Novidades da versão 0.8.0
 
@@ -120,7 +124,9 @@ Cada aba guarda onde a leitura estava: página, posição e zoom no PDF, rolagem
 
 Os botões de layout no fim da barra de abas (ou **Abas → Layout**, **⌥⌘1** a **⌥⌘5**) dividem a área de leitura em um painel, duas, três ou quatro colunas, ou numa grade 2×2. Ao ganhar painéis, eles recebem as próximas abas que não estão na tela; ao perder, as abas continuam na barra. Arraste as divisórias para mudar o tamanho dos painéis; o tamanho e o layout voltam na próxima abertura.
 
-Clique em qualquer ponto de um painel para focá-lo: o painel focado tem o número e o filete em verde, e a sidebar de comentários, o chat, os menus e os atalhos de zoom agem nele. Clicar numa aba que já está num painel foca esse painel; uma aba fora da tela abre no painel focado. **Abrir ao lado**, no menu de um arquivo da sidebar ou de uma aba, abre o documento num painel novo à direita. O ✕ do cabeçalho fecha o painel, não a aba. Um mesmo arquivo aparece em um painel por vez.
+Clique em qualquer ponto de um painel para focá-lo: o painel focado tem o número e o filete em verde, e a sidebar de comentários, o chat, os menus e os atalhos de zoom agem nele. Clicar numa aba que já está num painel foca esse painel; uma aba fora da tela abre no painel focado. **Abrir ao lado**, no menu de um arquivo da sidebar ou de uma aba, abre o documento num painel novo à direita.
+
+Também dá para arrastar um arquivo da sidebar até a área de leitura: o destaque verde mostra onde ele vai entrar. No meio de um painel, o arquivo substitui o que está nele (a aba anterior continua na barra); na metade esquerda ou direita, abre num painel novo daquele lado, até quatro. Com quatro painéis, ou na grade, o painel inteiro é o destino. Um arquivo que já está num painel não é duplicado: o painel dele é focado. O ✕ do cabeçalho fecha o painel, não a aba. Um mesmo arquivo aparece em um painel por vez.
 
 ### Destacar e comentar
 

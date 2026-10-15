@@ -108,10 +108,42 @@ final class AppModel {
     /// Opens a file in a tab: by default the preview tab, which the next file from the sidebar replaces.
     func openFile(_ url: URL, as kind: OpenKind = .preview) {
         workspace.open(url, as: kind)
+        noteRecent(url)
+    }
+
+    private func noteRecent(_ url: URL) {
         recents.removeAll { $0.standardizedFileURL == url.standardizedFileURL }
         recents.insert(url, at: 0)
         recents = Array(recents.prefix(Self.maxRecents))
         defaults.set(recents.map(\.path), forKey: "recents")
+    }
+
+    /// A file being dragged out of the sidebar: while set, the panes show where it can be dropped.
+    private(set) var draggedFile: URL?
+    @ObservationIgnored private var dragWatch: Task<Void, Never>?
+
+    /// Called when a drag leaves the sidebar. The drop targets go away when the mouse button is released, wherever
+    /// the drag ends (a drag cancelled over the sidebar never reaches them).
+    func beginFileDrag(_ url: URL) {
+        draggedFile = url
+        dragWatch?.cancel()
+        dragWatch = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            while !Task.isCancelled, NSEvent.pressedMouseButtons & 1 != 0 {
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+            guard !Task.isCancelled else { return }
+            self?.draggedFile = nil
+        }
+    }
+
+    /// A file dropped on a pane, in it or beside it.
+    func dropFile(_ url: URL, on pane: Int, side: DropSide) {
+        draggedFile = nil
+        dragWatch?.cancel()
+        guard FileTree.isSupported(url) else { return NSSound.beep() }
+        workspace.drop(url, on: pane, side: side)
+        noteRecent(url)
     }
 
     /// Whether a file is open in a tab, for the dot in the sidebar.

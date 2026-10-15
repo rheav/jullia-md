@@ -84,6 +84,8 @@ struct FileSidebar: View {
             .padding(.bottom, 12)
         }
         .dropDestination(for: URL.self) { urls, _ in
+            // A row dragged out of this sidebar and let go over it again is not an "open" request.
+            let urls = urls.filter { $0.standardizedFileURL != model.draggedFile?.standardizedFileURL }
             urls.forEach(model.open)
             return !urls.isEmpty
         }
@@ -287,6 +289,7 @@ private struct TreeRow: View {
         .simultaneousGesture(TapGesture(count: 2).onEnded {
             if node.isDirectory { model.browser.show(url) } else { model.openFile(url, as: .permanent) }
         })
+        .fileDrag(node.isDirectory ? nil : url, model: model)
         .contextMenu {
             if node.isDirectory {
                 Button("Entrar na pasta") { model.browser.show(url) }
@@ -319,6 +322,7 @@ private struct SearchResults: View {
                             .tag(FileRowID.file(url))
                             .help(url.path)
                             .simultaneousGesture(TapGesture(count: 2).onEnded { model.openFile(url, as: .permanent) })
+                            .fileDrag(url, model: model)
                             .contextMenu {
                                 FileMenu(url: url)
                                 Button("Mostrar pasta na sidebar") {
@@ -384,6 +388,7 @@ private struct RecentFiles: View {
                             .tag(FileRowID.file(url))
                             .help(url.path)
                             .simultaneousGesture(TapGesture(count: 2).onEnded { model.openFile(url, as: .permanent) })
+                            .fileDrag(url, model: model)
                             .contextMenu { FileMenu(url: url) }
                     }
                 }
@@ -477,6 +482,21 @@ private struct PlaceRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+    }
+}
+
+extension View {
+    /// Lets a file row be dragged onto the panes (or out of the app, as a file).
+    @ViewBuilder
+    func fileDrag(_ url: URL?, model: AppModel) -> some View {
+        if let url {
+            onDrag {
+                model.beginFileDrag(url)
+                return NSItemProvider(object: url as NSURL)
+            }
+        } else {
+            self
+        }
     }
 }
 

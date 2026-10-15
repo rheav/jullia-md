@@ -42,6 +42,11 @@ enum OpenKind {
     case beside
 }
 
+/// Where a file dragged onto a pane lands: in the pane, or in a new pane on one side of it.
+enum DropSide: Equatable {
+    case center, leading, trailing
+}
+
 /// How the reading area is divided.
 enum PaneLayout: String, CaseIterable, Codable, Identifiable {
     case one, two, three, four, grid
@@ -276,6 +281,33 @@ final class Workspace {
         } else {
             show(tab, in: (focusedPane + 1) % panes.count)
         }
+    }
+
+    /// Whether a drop on a pane's side can open a new pane there: columns, with room for one more.
+    var canAddPane: Bool { layout != .grid && panes.count < Self.maxPanes }
+
+    /// A file dropped on a pane: in that pane (center), or in a new pane beside it. A file already on screen keeps
+    /// its pane, which is focused.
+    func drop(_ url: URL, on pane: Int, side: DropSide) {
+        guard panes.indices.contains(pane) else { return }
+        let tab: DocumentTab
+        if let existing = self.tab(for: url) {
+            tab = existing
+        } else {
+            tab = DocumentTab(url: url, isPreview: false)
+            insert(tab)
+        }
+        tab.isPreview = false
+        if let shown = paneIndex(of: tab) { return show(tab, in: shown) }
+        guard side != .center, canAddPane, panes[pane].tabID != nil else { return show(tab, in: pane) }
+        var added = Pane()
+        added.tabID = tab.id
+        let index = side == .leading ? pane : pane + 1
+        panes.insert(added, at: index)
+        layout = .columns(panes.count)
+        focusedPane = index
+        if tab.document == nil { load(tab) }
+        onChange()
     }
 
     /// Closes a pane; its tab stays in the bar.

@@ -166,7 +166,115 @@ struct PaneView: View {
                 }
             }
             .background(PaneFocusMonitor { [weak workspace] in workspace?.focus(index) })
+            .overlay {
+                if model.draggedFile != nil {
+                    PaneDropTarget(
+                        allowsSides: workspace.canAddPane && tab != nil,
+                        color: theme.accent.ns
+                    ) { url, side in
+                        model.dropFile(url, on: index, side: side)
+                    }
+                }
+            }
         }
+    }
+}
+
+/// Over a pane while a file is dragged from the sidebar: shows where it would land (the whole pane, or the half
+/// where a new pane would open) and takes the drop. An AppKit view, so it sits above the PDF and text views, which
+/// would otherwise receive the drag.
+private struct PaneDropTarget: NSViewRepresentable {
+    let allowsSides: Bool
+    let color: NSColor
+    let onDrop: @MainActor (URL, DropSide) -> Void
+
+    func makeNSView(context: Context) -> DropTargetView {
+        let view = DropTargetView()
+        updateNSView(view, context: context)
+        return view
+    }
+
+    func updateNSView(_ view: DropTargetView, context: Context) {
+        view.allowsSides = allowsSides
+        view.color = color
+        view.onDrop = onDrop
+    }
+}
+
+final class DropTargetView: NSView {
+    var allowsSides = true
+    var color: NSColor = .controlAccentColor
+    var onDrop: @MainActor (URL, DropSide) -> Void = { _, _ in }
+    private let zone = CALayer()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        zone.cornerRadius = 10
+        zone.borderWidth = 2
+        zone.isHidden = true
+        layer?.addSublayer(zone)
+        registerForDraggedTypes([.fileURL])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    /// The outer thirds open a new pane on that side, when there is room for one; the rest replaces the pane's file.
+    func side(at point: NSPoint) -> DropSide {
+        guard allowsSides, bounds.width > 0 else { return .center }
+        if point.x < bounds.width * 0.3 { return .leading }
+        if point.x > bounds.width * 0.7 { return .trailing }
+        return .center
+    }
+
+    func rect(for side: DropSide) -> NSRect {
+        let inset = bounds.insetBy(dx: 6, dy: 6)
+        switch side {
+        case .center: return inset
+        case .leading: return NSRect(x: inset.minX, y: inset.minY, width: inset.width / 2, height: inset.height)
+        case .trailing: return NSRect(x: inset.midX, y: inset.minY, width: inset.width / 2, height: inset.height)
+        }
+    }
+
+    /// Lights the part of the pane the file would land in; nil puts it out.
+    func highlight(_ side: DropSide?) {
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.12)
+        if let side {
+            zone.frame = rect(for: side)
+            zone.backgroundColor = color.withAlphaComponent(0.16).cgColor
+            zone.borderColor = color.withAlphaComponent(0.75).cgColor
+        }
+        zone.isHidden = side == nil
+        CATransaction.commit()
+    }
+
+    private func fileURL(_ info: NSDraggingInfo) -> URL? {
+        let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]
+        return urls?.first
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        draggingUpdated(sender)
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard fileURL(sender) != nil else { return [] }
+        highlight(side(at: convert(sender.draggingLocation, from: nil)))
+        return .copy
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) { highlight(nil) }
+
+    override func draggingEnded(_ sender: NSDraggingInfo) { highlight(nil) }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        highlight(nil)
+        guard let url = fileURL(sender) else { return false }
+        let side = side(at: convert(sender.draggingLocation, from: nil))
+        // After the drag session returns: the drop rebuilds the panes, this view included.
+        DispatchQueue.main.async { [onDrop] in onDrop(url, side) }
+        return true
     }
 }
 
