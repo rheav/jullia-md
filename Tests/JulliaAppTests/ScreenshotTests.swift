@@ -24,7 +24,7 @@ import Testing
         settings.commentsGlass.enabled = false
         let model = AppModel(defaults: defaults, settings: settings, storeURL: nil)
         model.addFolder(examples)
-        model.openFile(examples.appending(path: "Guia-de-leitura.md"))
+        model.openFile(examples.appending(path: "Guia-de-leitura.md"), as: .permanent)
         model.openFile(file)
         let document = try #require(model.document)
         document.highlight(document.text.range(of: "Destaque o que importa."), color: .green)
