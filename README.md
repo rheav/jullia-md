@@ -6,9 +6,16 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.7.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.8.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.8.0
+
+- **Split**: até quatro documentos lado a lado, em 2, 3 ou 4 colunas ou numa grade 2×2, com divisórias arrastáveis.
+- Cada painel tem um cabeçalho numerado; as abas mostram o número do painel onde estão. Comentários, chat e atalhos agem no painel focado.
+- **Abrir ao lado**, no menu do arquivo ou da aba, abre um documento num painel novo.
+- PDFs se ajustam à largura de painéis estreitos, até 100%.
 
 ## Novidades da versão 0.7.0
 
@@ -109,6 +116,12 @@ Um clique num arquivo da sidebar o abre na **aba de prévia**, com o nome em it�
 
 Cada aba guarda onde a leitura estava: página, posição e zoom no PDF, rolagem no Markdown. O menu da aba fecha as outras ou as da direita. As abas e a aba ativa são restauradas ao reabrir o app, se **Reabrir as pastas e as abas ao iniciar** estiver ligado em Ajustes → Geral; os documentos das abas que não estão na tela só são lidos quando você volta a elas.
 
+### Lado a lado
+
+Os botões de layout no fim da barra de abas (ou **Abas → Layout**, **⌥⌘1** a **⌥⌘5**) dividem a área de leitura em um painel, duas, três ou quatro colunas, ou numa grade 2×2. Ao ganhar painéis, eles recebem as próximas abas que não estão na tela; ao perder, as abas continuam na barra. Arraste as divisórias para mudar o tamanho dos painéis; o tamanho e o layout voltam na próxima abertura.
+
+Clique em qualquer ponto de um painel para focá-lo: o painel focado tem o número e o filete em verde, e a sidebar de comentários, o chat, os menus e os atalhos de zoom agem nele. Clicar numa aba que já está num painel foca esse painel; uma aba fora da tela abre no painel focado. **Abrir ao lado**, no menu de um arquivo da sidebar ou de uma aba, abre o documento num painel novo à direita. O ✕ do cabeçalho fecha o painel, não a aba. Um mesmo arquivo aparece em um painel por vez.
+
 ### Destacar e comentar
 
 Selecione um trecho para abrir a barra de marcação. Escolha uma cor para destacar, o balão para comentar ou o botão de cópia para copiar o texto. O menu contextual também oferece essas ações. Clique em um destaque existente para mudar sua cor ou removê-lo.
@@ -119,7 +132,7 @@ Na sidebar de comentários, você pode iniciar uma conversa sobre o documento in
 
 PDFs abrem no leitor nativo PDFKit. Selecione texto para destacar, comentar ou copiar; clique em um destaque para mudar sua cor ou removê-lo. Clicar em um comentário na sidebar navega até o trecho. As seleções podem atravessar páginas e as anotações continuam disponíveis ao reabrir o arquivo.
 
-A barra do PDF mostra a página atual e oferece zoom e ajuste à janela. Com um PDF aberto, **⌘+**, **⌘−** e **⌘0** controlam o zoom. As cores do documento original são preservadas; os temas alteram a interface e as marcações do Jullia.
+A barra do PDF mostra a página atual e oferece zoom e ajuste à janela. Ao abrir, a página acompanha a largura do painel sem passar de 100%, então cabe inteira num painel estreito; **Ajustar** preenche a largura do painel. Com um PDF aberto, **⌘+**, **⌘−** e **⌘0** controlam o zoom. As cores do documento original são preservadas; os temas alteram a interface e as marcações do Jullia.
 
 PDFs protegidos pedem senha, que não é salva. PDFs sem texto extraível podem ser visualizados e receber comentários sobre o documento inteiro; reconhecimento de texto em imagens (OCR) não está incluído. As anotações ficam no SQLite, não são gravadas nem exportadas para o PDF. Marcações já existentes no arquivo continuam visíveis e não são importadas como conversas do Jullia.
 
@@ -183,6 +196,7 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌘W | Fechar a aba; sem abas, a janela |
 | ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior |
 | ⌘1 … ⌘8 / ⌘9 | Ir para a aba N / para a última aba |
+| ⌥⌘1 … ⌥⌘5 | Um painel / 2, 3 ou 4 colunas / grade 2×2 |
 | ⇧⌘H | Destacar a seleção com a última cor usada |
 | ⌥⌘M | Comentar a seleção; sem seleção, comentar o documento |
 | ⌥⌘I | Conversar sobre o trecho selecionado com IA |

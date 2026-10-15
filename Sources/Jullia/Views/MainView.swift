@@ -131,34 +131,19 @@ struct DocumentColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             topBar
-            if let document = model.document {
-                if let error = document.loadError {
-                    ContentUnavailableView("Arquivo indisponível", systemImage: "exclamationmark.triangle", description: Text(error))
-                        .foregroundStyle(theme.secondaryText.color)
-                } else if document.isPDF {
-                    PDFReader(document: document, theme: theme).id(document.url)
-                } else {
-                    DocumentTextView(
-                        document: document,
-                        rendered: document.rendered,
-                        renderToken: document.renderToken,
-                        decorations: document.decorations(theme: theme),
-                        scrollRequest: document.scrollRequest,
-                        theme: theme,
-                        readingWidth: settings.readingWidth
-                    )
-                    .id(document.url)
-                }
-            } else {
+            if model.workspace.tabs.isEmpty {
                 EmptyState(theme: theme)
+            } else {
+                PaneGrid(theme: theme)
             }
         }
     }
 
     private var topBar: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             if !model.workspace.tabs.isEmpty {
                 TabBar(theme: theme)
+                LayoutPicker(theme: theme)
             }
             Spacer(minLength: 0)
         }
@@ -171,6 +156,32 @@ struct DocumentColumn: View {
         .frame(height: Layout.topBar, alignment: .top)
         .background {
             Color.clear.contentShape(Rectangle()).gesture(WindowDragGesture())
+        }
+    }
+}
+
+/// One document as it reads: the PDF reader or the rendered Markdown, or why the file could not be opened.
+struct DocumentReader: View {
+    let document: DocumentModel
+    let theme: Theme
+    @Environment(AppSettings.self) private var settings
+
+    var body: some View {
+        if let error = document.loadError {
+            ContentUnavailableView("Arquivo indisponível", systemImage: "exclamationmark.triangle", description: Text(error))
+                .foregroundStyle(theme.secondaryText.color)
+        } else if document.isPDF {
+            PDFReader(document: document, theme: theme)
+        } else {
+            DocumentTextView(
+                document: document,
+                rendered: document.rendered,
+                renderToken: document.renderToken,
+                decorations: document.decorations(theme: theme),
+                scrollRequest: document.scrollRequest,
+                theme: theme,
+                readingWidth: settings.readingWidth
+            )
         }
     }
 }

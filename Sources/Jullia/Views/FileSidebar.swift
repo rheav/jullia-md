@@ -488,6 +488,7 @@ private struct FileMenu: View {
     var body: some View {
         Button("Abrir") { model.openFile(url) }
         Button("Abrir em nova aba") { model.openFile(url, as: .newTab) }
+        Button("Abrir ao lado") { model.openFile(url, as: .beside) }
         Divider()
         Button("Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
     }

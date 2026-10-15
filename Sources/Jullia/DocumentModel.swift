@@ -11,12 +11,14 @@ struct Decoration: Equatable {
     var anchor: TextAnchor? = nil
 }
 
-/// A place in a PDF: the page, the point at the top left of the view on it, and the zoom.
+/// A place in a PDF: the page, the point at the top left of the view on it, and the zoom (fitted to the pane,
+/// filling it, or chosen by the reader).
 struct PDFPosition: Equatable {
     var page: Int
     var point: CGPoint
     var scale: CGFloat
     var autoScales: Bool
+    var fitsPane: Bool
 }
 
 struct ScrollRequest: Equatable {

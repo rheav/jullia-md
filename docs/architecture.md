@@ -46,7 +46,9 @@ Os modelos da interface usam `@Observable` e executam no `MainActor`. `AppSettin
 
 ## Organização visual
 
-`MainView` dispõe a sidebar de arquivos, a coluna de leitura (com a barra de abas na faixa superior) e a sidebar de comentários. Cada leitor salva sua posição no `DocumentModel` ao sair da tela e a restaura quando volta; sair da posição de abertura chama `onNavigated`, que fixa a aba de prévia. Cada painel pode se reduzir a uma barra de ícones. `Glass` reúne o desfoque da janela e os preenchimentos de cada painel, respeitando a preferência de acessibilidade para reduzir transparência.
+`MainView` dispõe a sidebar de arquivos, a coluna de leitura (com a barra de abas na faixa superior) e a sidebar de comentários. Cada leitor salva sua posição no `DocumentModel` ao sair da tela e a restaura quando volta; sair da posição de abertura chama `onNavigated`, que fixa a aba de prévia.
+
+`PaneGrid` divide a coluna de leitura segundo o `PaneLayout` do `Workspace` (uma a quatro colunas ou grade 2×2), com divisórias arrastáveis cujas frações ficam na sessão. Cada `PaneView` mostra o `DocumentReader` da sua aba e um cabeçalho quando há mais de um painel. Um monitor local de eventos por painel foca o painel no clique sem consumir o evento; o inspector e os comandos seguem o painel focado. Definir `minScaleFactor` desliga o `autoScales` do PDFKit, então `AnnotatedPDFView` ajusta a escala à largura do painel por conta própria, limitada a 100%, até o leitor usar o zoom. Cada painel pode se reduzir a uma barra de ícones. `Glass` reúne o desfoque da janela e os preenchimentos de cada painel, respeitando a preferência de acessibilidade para reduzir transparência.
 
 Os cards de comentários ficam em `CommentCards`, a barra de seleção em `SelectionPill` e os menus em `JulliaCommands`. Essa divisão permite revisar componentes sem misturar desenho, menus e adaptação do TextKit.
 

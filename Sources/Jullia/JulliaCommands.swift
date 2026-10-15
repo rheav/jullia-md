@@ -40,6 +40,14 @@ struct JulliaCommands: Commands {
                     .keyboardShortcut("9", modifiers: .command)
             }
             Divider()
+            Menu("Layout") {
+                ForEach(Array(PaneLayout.allCases.enumerated()), id: \.element) { index, layout in
+                    Button(layout.title) { model.workspace.setLayout(layout) }
+                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: [.command, .option])
+                }
+            }
+            .disabled(model.workspace.tabs.isEmpty)
+            Divider()
             Button("Manter aba") { if let tab = model.workspace.focusedTab { model.workspace.pin(tab) } }
                 .disabled(model.workspace.focusedTab?.isPreview != true)
             Button("Fechar aba") { model.closeFocusedTab() }

@@ -114,6 +114,9 @@ private struct TabChip: View {
             if tab.isPreview {
                 Button("Manter aba") { workspace.pin(tab) }
             }
+            Button("Abrir ao lado") { workspace.open(tab.url, as: .beside) }
+                .disabled(workspace.isVisible(tab))
+            Divider()
             Button("Fechar") { workspace.close(tab) }
             Button("Fechar outras") { workspace.closeOthers(than: tab) }
                 .disabled(workspace.tabs.count < 2)

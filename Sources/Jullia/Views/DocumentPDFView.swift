@@ -67,7 +67,7 @@ struct DocumentPDFView: NSViewRepresentable {
         let view = AnnotatedPDFView()
         view.displayMode = .singlePageContinuous
         view.displayDirection = .vertical
-        view.autoScales = true
+        // Setting the scale limits turns PDFKit's autoScales off; the view fits the page itself (see `fitsPane`).
         view.minScaleFactor = 0.1
         view.maxScaleFactor = 8
         view.installObservers()
@@ -100,6 +100,10 @@ final class AnnotatedPDFView: PDFView {
     private var pendingRestore: PDFPosition?
     /// The page the document opened on; leaving it keeps a preview tab.
     private var openedPage: Int?
+    /// Until the reader zooms, the page follows the pane's width, never above 100%: a narrow split pane shows the
+    /// whole width, a wide pane keeps the page at its own size. "Ajustar" fills the width instead (PDFKit's autoScales).
+    private(set) var fitsPane = true
+    private var fitting = false
 
     func installObservers() {
         let center = NotificationCenter.default
@@ -186,6 +190,7 @@ final class AnnotatedPDFView: PDFView {
         }
         if zoomToken != model.pdfZoomToken {
             zoomToken = model.pdfZoomToken
+            fitsPane = false
             switch model.pdfZoomDirection {
             case 1: zoomIn(nil)
             case -1: zoomOut(nil)
@@ -233,6 +238,7 @@ final class AnnotatedPDFView: PDFView {
     override func layout() {
         super.layout()
         restorePosition()
+        fitToPane()
     }
 
     /// Back to where the reader was, once the view is laid out (a destination means nothing at zero size).
@@ -240,10 +246,13 @@ final class AnnotatedPDFView: PDFView {
         guard let saved = pendingRestore, bounds.width > 0, bounds.height > 0, let document, document.pageCount > 0,
               let page = document.page(at: min(saved.page, document.pageCount - 1)) else { return }
         pendingRestore = nil
-        if !saved.autoScales {
-            autoScales = false
+        fitsPane = saved.fitsPane
+        if saved.autoScales {
+            autoScales = true
+        } else if !saved.fitsPane {
             scaleFactor = saved.scale
         }
+        fitToPane()
         go(to: PDFDestination(page: page, at: saved.point))
     }
 
@@ -252,10 +261,28 @@ final class AnnotatedPDFView: PDFView {
         guard let model, pendingRestore == nil, let document, let destination = currentDestination,
               let page = destination.page else { return }
         model.pdfPosition = PDFPosition(page: document.index(for: page), point: destination.point,
-                                        scale: scaleFactor, autoScales: autoScales)
+                                        scale: scaleFactor, autoScales: autoScales, fitsPane: fitsPane)
     }
 
-    @objc private func viewportChanged() { hidePill() }
+    @objc private func viewportChanged() {
+        // A pinch or a zoom from PDFKit's own menu: the reader chose a size.
+        if !fitting, !autoScales, pendingRestore == nil, document != nil, fitsPane, abs(scaleFactor - fittedScale) > 0.01 {
+            fitsPane = false
+        }
+        hidePill()
+    }
+
+    /// The pane's width, capped at the page's own size.
+    private var fittedScale: CGFloat { min(scaleFactorForSizeToFit, 1) }
+
+    private func fitToPane() {
+        guard fitsPane, !autoScales, document != nil, bounds.width > 0 else { return }
+        let scale = fittedScale
+        guard scale > 0, abs(scaleFactor - scale) > 0.001 else { return }
+        fitting = true
+        scaleFactor = scale
+        fitting = false
+    }
 
     private func finishedSelection(at point: NSPoint) {
         guard let model else { return }

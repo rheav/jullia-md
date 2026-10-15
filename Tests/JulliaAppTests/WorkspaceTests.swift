@@ -152,4 +152,120 @@ import Testing
         second.layout()
         #expect(second.currentPage.flatMap { model.pdfDocument?.index(for: $0) } == 2, "Shown again, it is back on the same page")
     }
+
+    @Test func layoutsFillAndDropPanesAndFocusFollowsTheTab() throws {
+        let (folder, files) = try makeFiles(["a.md", "b.md", "c.md", "d.md", "e.md"])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (model, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let workspace = model.workspace
+        for file in files.prefix(4) { model.openFile(file, as: .newTab) }
+        workspace.selectTab(at: 0)
+
+        workspace.setLayout(.three)
+        #expect(workspace.panes.count == 3)
+        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["a.md", "b.md", "c.md"], "New panes take the next hidden tabs")
+        #expect(model.document?.url == files[0])
+
+        // A tab already in a pane focuses that pane instead of moving.
+        workspace.select(try #require(workspace.tab(for: files[2])))
+        #expect(workspace.focusedPane == 2)
+        #expect(model.document?.url == files[2])
+        workspace.focus(1)
+        #expect(model.document?.url == files[1])
+
+        // A hidden tab goes into the focused pane.
+        workspace.select(try #require(workspace.tab(for: files[3])))
+        #expect(workspace.focusedPane == 1)
+        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["a.md", "d.md", "c.md"])
+
+        // Beside: a new pane right of the focused one, up to four.
+        model.openFile(files[4], as: .beside)
+        #expect(workspace.layout == .four)
+        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["a.md", "d.md", "e.md", "c.md"])
+        #expect(workspace.focusedPane == 2)
+
+        workspace.setLayout(.grid)
+        #expect(workspace.panes.count == 4)
+        workspace.setLayout(.two)
+        #expect(workspace.panes.count == 2)
+        #expect(workspace.tabs.count == 5, "Dropped panes leave their tabs in the bar")
+        #expect(workspace.focusedPane == 1)
+
+        // Closing a pane keeps its tab; closing the only tab of a pane closes the pane.
+        workspace.closePane(0)
+        #expect(workspace.layout == .one)
+        #expect(workspace.tabs.count == 5)
+        workspace.setLayout(.two)
+        let second = try #require(workspace.tab(workspace.panes[1].tabID))
+        for tab in workspace.tabs where tab.id != second.id && !workspace.isVisible(tab) { workspace.close(tab) }
+        workspace.close(second)
+        #expect(workspace.panes.count == 1, "A split pane left with nothing to show closes")
+        #expect(workspace.layout == .one)
+    }
+
+    @Test func sessionKeepsLayoutPanesAndSizes() throws {
+        let (folder, files) = try makeFiles(["a.md", "b.md", "c.md"])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (model, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for file in files { model.openFile(file, as: .newTab) }
+        model.workspace.selectTab(at: 0)
+        model.workspace.setLayout(.two)
+        model.workspace.setFractions([0.3, 0.7], for: .two)
+        model.workspace.focus(1)
+        model.prepareToQuit()
+
+        let (reopened, _) = try makeModel(suite)
+        let workspace = reopened.workspace
+        #expect(workspace.layout == .two)
+        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["a.md", "b.md"])
+        #expect(workspace.focusedPane == 1)
+        #expect(workspace.fractions[.two] == [0.3, 0.7])
+        #expect(reopened.document?.url.lastPathComponent == "b.md")
+        #expect(workspace.tab(for: files[2])?.document == nil)
+    }
+
+    @Test func pdfFitsANarrowPaneButNeverGrowsPastItsSize() throws {
+        let file = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).pdf")
+        defer { try? FileManager.default.removeItem(at: file) }
+        try PDFTests.writePDF(["Uma página larga o bastante"], to: file)
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (app, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        app.openFile(file)
+        let model = try #require(app.document)
+        _ = NSApplication.shared
+
+        func makeView(width: CGFloat) -> AnnotatedPDFView {
+            let view = AnnotatedPDFView(frame: CGRect(x: 0, y: 0, width: width, height: 700))
+            view.displayMode = .singlePageContinuous
+            // As the app does: the limits turn PDFKit's autoScales off.
+            view.minScaleFactor = 0.1
+            view.maxScaleFactor = 8
+            view.installObservers()
+            view.update(model: model, theme: .polar, appModel: app)
+            view.layout()
+            return view
+        }
+
+        let narrow = makeView(width: 320)
+        defer { narrow.tearDown() }
+        #expect(narrow.scaleFactor < 0.6, "A 600 pt page fits a 320 pt pane")
+        #expect(abs(narrow.scaleFactor - narrow.scaleFactorForSizeToFit) < 0.01)
+        narrow.setFrameSize(NSSize(width: 450, height: 700))
+        narrow.layout()
+        #expect(abs(narrow.scaleFactor - narrow.scaleFactorForSizeToFit) < 0.01, "It follows the pane when it is resized")
+
+        let wide = makeView(width: 1800)
+        defer { wide.tearDown() }
+        #expect(wide.scaleFactor == 1, "A wide pane keeps the page at its own size")
+
+        model.zoomPDF(1)
+        wide.update(model: model, theme: .polar, appModel: app)
+        #expect(!wide.fitsPane, "Zooming stops the fitting")
+        #expect(wide.scaleFactor > 1)
+    }
 }
