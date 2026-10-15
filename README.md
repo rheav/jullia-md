@@ -138,6 +138,8 @@ O botão de visor no fim da barra de abas, o menu **View → Modo zen** ou **⌃
 
 Destacar, copiar, zoom e a troca de abas por atalho continuam funcionando. **Comentar** e **Conversar sobre trecho** saem do zen e abrem o painel. Ao sair, tudo volta como estava, inclusive um comentário ou pergunta em edição. O app sempre abre fora do zen.
 
+![Modo zen com dois PDFs lado a lado e apenas o botão discreto de saída no canto](docs/screenshots/zen.png)
+
 ### Destacar e comentar
 
 Selecione um trecho para abrir a barra de marcação. Escolha uma cor para destacar, o balão para comentar ou o botão de cópia para copiar o texto. O menu contextual também oferece essas ações. Clique em um destaque existente para mudar sua cor ou removê-lo.
