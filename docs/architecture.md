@@ -5,7 +5,7 @@ Jullia.md é um pacote Swift com um executável (`Jullia`) e um módulo de supor
 ## Do arquivo à tela
 
 1. `JulliaApp` executa a migração legada e injeta `AppModel` e `AppSettings` na janela.
-2. `AppModel` mantém as pastas, os arquivos recentes, o documento aberto e os contadores da sidebar. `FileTree` monta, ordena e busca na árvore. `FileBrowser` guarda a navegação da sidebar: a pasta mostrada, as subpastas abertas e a ordenação. A pasta mostrada é uma subárvore de uma raiz já varrida; fora das raízes, `AppModel` varre a pasta sozinha, até quatro níveis, e a observa.
+2. `AppModel` mantém as pastas, os arquivos recentes, as abas e os contadores da sidebar. `Workspace` guarda as abas (`DocumentTab`) e os painéis que as mostram; um arquivo fica em no máximo uma aba, e uma aba em no máximo um painel. O documento da aba só é criado quando ela aparece. `AppModel.document` é o documento do painel focado. A sessão (abas, prévia, painéis, layout) é salva em UserDefaults como JSON. `FileTree` monta, ordena e busca na árvore. `FileBrowser` guarda a navegação da sidebar: a pasta mostrada, as subpastas abertas e a ordenação. A pasta mostrada é uma subárvore de uma raiz já varrida; fora das raízes, `AppModel` varre a pasta sozinha, até quatro níveis, e a observa.
 3. `DocumentModel` lê o arquivo e chama `MarkdownRenderer` com tema, tamanho de fonte e diretório-base para links e imagens.
 4. O parser produz a árvore Markdown; o renderer a converte em `NSAttributedString`. `TextBlocks` desenha blocos de código, citações e separadores.
 5. `DocumentTextView` integra um `NSTextView` de TextKit 1 ao SwiftUI. O texto é selecionável e não editável. Destaques e sublinhados usam atributos temporários do layout, separados do texto renderizado.
@@ -32,7 +32,7 @@ O banco não escreve nos documentos. A chave de um documento é seu caminho padr
 
 ## Estado e observação
 
-`InspectorSidebar` alterna entre comentários e **Chat com IA**. `DocumentModel` possui um `PassageChat` com uma cópia da `TextAnchor` selecionada, independente das seleções seguintes. Os dois leitores acionam `startChat` pela barra flutuante e pelos menus. `AppModel` revela a aba e cancela a geração ao trocar de documento.
+`InspectorSidebar` alterna entre comentários e **Chat com IA**. `DocumentModel` possui um `PassageChat` com uma cópia da `TextAnchor` selecionada, independente das seleções seguintes. Os dois leitores acionam `startChat` pela barra flutuante e pelos menus. `AppModel` revela a aba do chat; a geração continua se a aba do documento sair da tela e é cancelada ao fechar a aba ou encerrar o app.
 
 `ApplePassageChat` é a integração exclusiva com `SystemLanguageModel` de Foundation Models. A cada pergunta, reconstrói uma `LanguageModelSession` com instruções, o trecho e pares completos de perguntas/respostas. Usa a contagem de tokens e o limite do modelo para remover turnos antigos inteiros, reservando espaço para a resposta. Nunca corta o trecho silenciosamente. Uma geração cancelada ou malsucedida não entra no contexto seguinte; identificadores por requisição rejeitam atualizações atrasadas. O limite da integração é o protocolo `PassageChatGenerating`, usado pelos testes para exercitar falhas e concorrência sem depender do modelo instalado.
 
@@ -46,7 +46,7 @@ Os modelos da interface usam `@Observable` e executam no `MainActor`. `AppSettin
 
 ## Organização visual
 
-`MainView` dispõe a sidebar de arquivos, a coluna de leitura e a sidebar de comentários. Cada painel pode se reduzir a uma barra de ícones. `Glass` reúne o desfoque da janela e os preenchimentos de cada painel, respeitando a preferência de acessibilidade para reduzir transparência.
+`MainView` dispõe a sidebar de arquivos, a coluna de leitura (com a barra de abas na faixa superior) e a sidebar de comentários. Cada leitor salva sua posição no `DocumentModel` ao sair da tela e a restaura quando volta; sair da posição de abertura chama `onNavigated`, que fixa a aba de prévia. Cada painel pode se reduzir a uma barra de ícones. `Glass` reúne o desfoque da janela e os preenchimentos de cada painel, respeitando a preferência de acessibilidade para reduzir transparência.
 
 Os cards de comentários ficam em `CommentCards`, a barra de seleção em `SelectionPill` e os menus em `JulliaCommands`. Essa divisão permite revisar componentes sem misturar desenho, menus e adaptação do TextKit.
 

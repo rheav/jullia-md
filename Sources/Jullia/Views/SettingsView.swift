@@ -18,7 +18,7 @@ private struct GeneralSettings: View {
         @Bindable var settings = settings
         Form {
             Section("Abrir") {
-                Toggle("Reabrir as pastas e o último arquivo ao iniciar", isOn: $settings.reopenFolders)
+                Toggle("Reabrir as pastas e as abas ao iniciar", isOn: $settings.reopenFolders)
                 Toggle("Recarregar quando o arquivo mudar no disco", isOn: $settings.liveReload)
             }
             Section("Leitura") {

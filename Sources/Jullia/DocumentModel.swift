@@ -11,6 +11,14 @@ struct Decoration: Equatable {
     var anchor: TextAnchor? = nil
 }
 
+/// A place in a PDF: the page, the point at the top left of the view on it, and the zoom.
+struct PDFPosition: Equatable {
+    var page: Int
+    var point: CGPoint
+    var scale: CGFloat
+    var autoScales: Bool
+}
+
 struct ScrollRequest: Equatable {
     var range: NSRange
     var token: Int
@@ -63,6 +71,11 @@ final class DocumentModel {
     /// Called after any change to annotations, so the sidebar counts follow.
     @ObservationIgnored var onAnnotationsChanged: () -> Void = {}
     @ObservationIgnored var onChatStarted: () -> Void = {}
+    /// Called when the reader moves away from where the document opened: another page, a scroll.
+    @ObservationIgnored var onNavigated: () -> Void = {}
+    /// Where the reader was, kept while the document's view is not on screen (another tab, another layout).
+    @ObservationIgnored var pdfPosition: PDFPosition?
+    @ObservationIgnored var textOffset: CGFloat?
 
     @ObservationIgnored private let store: AnnotationStore?
     @ObservationIgnored private var source = ""

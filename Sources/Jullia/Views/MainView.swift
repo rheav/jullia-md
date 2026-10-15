@@ -122,7 +122,7 @@ struct MainView: View {
     }
 }
 
-/// The middle column: the path in the top strip, over the document.
+/// The middle column: the tabs in the top strip, over the document.
 struct DocumentColumn: View {
     let theme: Theme
     @Environment(AppModel.self) private var model
@@ -156,25 +156,15 @@ struct DocumentColumn: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 5) {
-            if let document = model.document {
-                Text(document.url.deletingLastPathComponent().lastPathComponent)
-                    .foregroundStyle(theme.secondaryText.color)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(theme.secondaryText.color.opacity(0.7))
-                Text(document.url.lastPathComponent)
-                    .fontWeight(.medium)
-                    .foregroundStyle(theme.heading.color)
+        HStack(spacing: 0) {
+            if !model.workspace.tabs.isEmpty {
+                TabBar(theme: theme)
             }
             Spacer(minLength: 0)
         }
-        .font(.system(size: 12.5))
-        .lineLimit(1)
-        .help(model.document?.url.path ?? "")
         // Clear of the traffic lights when the file panel is folded to its rail.
-        .padding(.leading, model.filesCollapsed ? 28 : 16)
-        .padding(.trailing, 16)
+        .padding(.leading, model.filesCollapsed ? 28 : 10)
+        .padding(.trailing, 12)
         // Centred on the traffic lights' row rather than on the whole strip.
         .frame(height: 32)
         .padding(.top, 2)

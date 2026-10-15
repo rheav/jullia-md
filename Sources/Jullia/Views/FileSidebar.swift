@@ -279,20 +279,21 @@ private struct TreeRow: View {
             } else {
                 Color.clear.frame(width: 10, height: 1)
             }
-            FileLabel(name: node.name, isDirectory: node.isDirectory, count: node.isDirectory ? 0 : model.count(for: url), theme: theme)
+            FileLabel(name: node.name, isDirectory: node.isDirectory, count: node.isDirectory ? 0 : model.count(for: url), theme: theme,
+                      isOpen: !node.isDirectory && model.isOpen(url))
         }
         .contentShape(Rectangle())
         .help(node.name)
         .simultaneousGesture(TapGesture(count: 2).onEnded {
-            if node.isDirectory { model.browser.show(url) }
+            if node.isDirectory { model.browser.show(url) } else { model.openFile(url, as: .permanent) }
         })
         .contextMenu {
             if node.isDirectory {
                 Button("Entrar na pasta") { model.browser.show(url) }
+                Button("Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             } else {
-                Button("Abrir") { model.openFile(url) }
+                FileMenu(url: url)
             }
-            Button("Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
         }
     }
 }
@@ -313,10 +314,18 @@ private struct SearchResults: View {
                     ForEach(results) { node in
                         let url = node.url.standardizedFileURL
                         FileLabel(name: node.name, isDirectory: false, count: model.count(for: url), theme: theme,
-                                  detail: location(of: url))
+                                  detail: location(of: url), isOpen: model.isOpen(url))
+                            .contentShape(Rectangle())
                             .tag(FileRowID.file(url))
                             .help(url.path)
-                            .contextMenu { fileMenu(url) }
+                            .simultaneousGesture(TapGesture(count: 2).onEnded { model.openFile(url, as: .permanent) })
+                            .contextMenu {
+                                FileMenu(url: url)
+                                Button("Mostrar pasta na sidebar") {
+                                    model.fileQuery = ""
+                                    model.browser.show(url.deletingLastPathComponent())
+                                }
+                            }
                     }
                 }
             }
@@ -334,16 +343,6 @@ private struct SearchResults: View {
         return ([root.name] + relative).joined(separator: " › ")
     }
 
-    @ViewBuilder
-    private func fileMenu(_ url: URL) -> some View {
-        Button("Abrir") { model.openFile(url) }
-        Button("Mostrar pasta na sidebar") {
-            model.fileQuery = ""
-            model.browser.show(url.deletingLastPathComponent())
-            model.browser.reveal(url)
-        }
-        Button("Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-    }
 }
 
 /// The recently opened files, newest first, each with its folder.
@@ -380,9 +379,12 @@ private struct RecentFiles: View {
                     ForEach(model.recents, id: \.self) { url in
                         let url = url.standardizedFileURL
                         FileLabel(name: url.lastPathComponent, isDirectory: false, count: model.count(for: url), theme: theme,
-                                  detail: url.deletingLastPathComponent().lastPathComponent)
+                                  detail: url.deletingLastPathComponent().lastPathComponent, isOpen: model.isOpen(url))
+                            .contentShape(Rectangle())
                             .tag(FileRowID.file(url))
                             .help(url.path)
+                            .simultaneousGesture(TapGesture(count: 2).onEnded { model.openFile(url, as: .permanent) })
+                            .contextMenu { FileMenu(url: url) }
                     }
                 }
                 .listStyle(.sidebar)
@@ -478,6 +480,19 @@ private struct PlaceRow: View {
     }
 }
 
+/// The actions on a file row.
+private struct FileMenu: View {
+    let url: URL
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Button("Abrir") { model.openFile(url) }
+        Button("Abrir em nova aba") { model.openFile(url, as: .newTab) }
+        Divider()
+        Button("Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+    }
+}
+
 /// A quiet line of text where a list would be.
 private struct Note: View {
     let text: String
@@ -493,13 +508,15 @@ private struct Note: View {
 }
 
 /// A file or folder: icon, a name that wraps to a second line instead of losing its middle, an optional detail
-/// line, and the annotation count.
+/// line, whether it is open in a tab, and the annotation count.
 struct FileLabel: View {
     let name: String
     let isDirectory: Bool
     let count: Int
     let theme: Theme
     var detail: String? = nil
+    /// Open in a tab: marked with a dot.
+    var isOpen = false
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -521,6 +538,12 @@ struct FileLabel: View {
                 }
             }
             Spacer(minLength: 4)
+            if isOpen {
+                Circle()
+                    .fill(theme.accent.color)
+                    .frame(width: 5, height: 5)
+                    .help("Aberto numa aba")
+            }
             if count > 0 {
                 Text("\(count)")
                     .font(.system(size: 10, weight: .semibold).monospacedDigit())

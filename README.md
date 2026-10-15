@@ -6,9 +6,15 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.6.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.7.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.7.0
+
+- **Abas**: vários documentos abertos, na faixa superior da janela, cada um lembrando a página, o zoom ou a rolagem.
+- **Aba de prévia**: um clique na sidebar abre o arquivo numa aba em itálico, substituída pelo próximo clique. Ela vira fixa com duplo clique, ao anotar ou ao mudar de página.
+- As abas abertas voltam na próxima vez que o app abre; os arquivos abertos têm um ponto na sidebar.
 
 ## Novidades da versão 0.6.0
 
@@ -97,6 +103,12 @@ A árvore reconhece `.md`, `.markdown`, `.mdown`, `.mkd` e `.pdf`, ignora arquiv
 
 A sidebar mostra uma pasta por vez. Ao abrir um documento, ela vai para a pasta dele, ou abre o caminho até ele se o arquivo estiver dentro da pasta mostrada. Clique numa subpasta para abri-la no lugar; dê duplo clique (ou use **Entrar na pasta**) para que ela vire o topo da árvore. O breadcrumb sobe de volta até a pasta adicionada, nunca acima dela. Um arquivo aberto fora dessas pastas mostra a própria pasta, até quatro níveis abaixo, com o botão **⊕** para adicioná-la aos **Locais**. O botão **⇅** ordena por nome ou por data de modificação (mais recentes primeiro); as pastas vêm sempre antes dos arquivos.
 
+### Abas
+
+Um clique num arquivo da sidebar o abre na **aba de prévia**, com o nome em itálico: o próximo arquivo clicado toma o lugar dela, então dá para folhear uma pasta sem acumular abas. A prévia vira uma aba fixa com um duplo clique (no arquivo ou na aba), ao destacar ou comentar, ao mudar de página no PDF ou ao rolar o Markdown. **Abrir em nova aba**, no menu do arquivo, e os arquivos abertos por **⌘O**, pelo Finder ou arrastados já abrem fixos. Um arquivo já aberto não é aberto de novo: o app vai para a aba dele.
+
+Cada aba guarda onde a leitura estava: página, posição e zoom no PDF, rolagem no Markdown. O menu da aba fecha as outras ou as da direita. As abas e a aba ativa são restauradas ao reabrir o app, se **Reabrir as pastas e as abas ao iniciar** estiver ligado em Ajustes → Geral; os documentos das abas que não estão na tela só são lidos quando você volta a elas.
+
 ### Destacar e comentar
 
 Selecione um trecho para abrir a barra de marcação. Escolha uma cor para destacar, o balão para comentar ou o botão de cópia para copiar o texto. O menu contextual também oferece essas ações. Clique em um destaque existente para mudar sua cor ou removê-lo.
@@ -168,6 +180,9 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌘O | Abrir arquivo ou pasta |
 | ⇧⌘O | Adicionar pasta |
 | ⌘R | Recarregar documento e pastas |
+| ⌘W | Fechar a aba; sem abas, a janela |
+| ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior |
+| ⌘1 … ⌘8 / ⌘9 | Ir para a aba N / para a última aba |
 | ⇧⌘H | Destacar a seleção com a última cor usada |
 | ⌥⌘M | Comentar a seleção; sem seleção, comentar o documento |
 | ⌥⌘I | Conversar sobre o trecho selecionado com IA |
@@ -196,7 +211,7 @@ Até a versão 0.2.0, o projeto se chamava **Marknord**. Na primeira abertura co
 
 ## Limitações atuais
 
-- Uma janela principal com um documento aberto por vez, sem abas ou edição de Markdown.
+- Uma janela principal, sem edição de Markdown. Abas não podem ser arrastadas para reordenar.
 - A busca da sidebar procura nomes de arquivos; não indexa o conteúdo das pastas.
 - Imagens locais são renderizadas. Imagens remotas aparecem como texto alternativo, sem download automático.
 - Blocos de código usam fonte monoespaçada, sem realce de sintaxe por linguagem.

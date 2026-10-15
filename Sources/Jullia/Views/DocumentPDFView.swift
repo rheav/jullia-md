@@ -96,6 +96,10 @@ final class AnnotatedPDFView: PDFView {
     private var scrollToken = 0
     private var zoomToken = 0
     private var updating = false
+    /// Where the reader was last time this document was on screen, applied once the view has a size.
+    private var pendingRestore: PDFPosition?
+    /// The page the document opened on; leaving it keeps a preview tab.
+    private var openedPage: Int?
 
     func installObservers() {
         let center = NotificationCenter.default
@@ -120,6 +124,7 @@ final class AnnotatedPDFView: PDFView {
     }
 
     func tearDown() {
+        savePosition()
         if let mouseMonitor { NSEvent.removeMonitor(mouseMonitor) }
         mouseMonitor = nil
         NotificationCenter.default.removeObserver(self)
@@ -140,12 +145,17 @@ final class AnnotatedPDFView: PDFView {
         self.theme = theme
         backgroundColor = theme.background.ns
         if document !== model.pdfDocument {
+            let firstAttach = document == nil
             let previousPage = currentPage.flatMap { document?.index(for: $0) } ?? 0
             removeMarks()
             document = model.pdfDocument
-            if let document, let page = document.page(at: min(previousPage, max(0, document.pageCount - 1))) {
+            if firstAttach, let saved = model.pdfPosition {
+                pendingRestore = saved
+                needsLayout = true
+            } else if let document, let page = document.page(at: min(previousPage, max(0, document.pageCount - 1))) {
                 go(to: page)
             }
+            if firstAttach { openedPage = model.pdfPosition?.page ?? 0 }
             decorations = []
             hidePill()
             pageChanged()
@@ -211,10 +221,38 @@ final class AnnotatedPDFView: PDFView {
         guard let page = currentPage, let document else { return }
         let number = document.index(for: page) + 1
         let currentModel = model
+        let navigated = pendingRestore == nil && openedPage.map { $0 != number - 1 } == true
+        if navigated { openedPage = nil }
         DispatchQueue.main.async { [weak currentModel] in
             if currentModel?.pdfPageNumber != number { currentModel?.pdfPageNumber = number }
+            if navigated { currentModel?.onNavigated() }
         }
         hidePill()
+    }
+
+    override func layout() {
+        super.layout()
+        restorePosition()
+    }
+
+    /// Back to where the reader was, once the view is laid out (a destination means nothing at zero size).
+    private func restorePosition() {
+        guard let saved = pendingRestore, bounds.width > 0, bounds.height > 0, let document, document.pageCount > 0,
+              let page = document.page(at: min(saved.page, document.pageCount - 1)) else { return }
+        pendingRestore = nil
+        if !saved.autoScales {
+            autoScales = false
+            scaleFactor = saved.scale
+        }
+        go(to: PDFDestination(page: page, at: saved.point))
+    }
+
+    /// Remembers the page, the point at the top of the view and the zoom, for when the tab is shown again.
+    private func savePosition() {
+        guard let model, pendingRestore == nil, let document, let destination = currentDestination,
+              let page = destination.page else { return }
+        model.pdfPosition = PDFPosition(page: document.index(for: page), point: destination.point,
+                                        scale: scaleFactor, autoScales: autoScales)
     }
 
     @objc private func viewportChanged() { hidePill() }

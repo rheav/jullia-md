@@ -42,7 +42,13 @@ struct DocumentTextView: NSViewRepresentable {
         textView.coordinator = context.coordinator
 
         scrollView.documentView = textView
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        context.coordinator.observeScrolling(of: scrollView.contentView)
         return scrollView
+    }
+
+    static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
+        coordinator.stopObservingScrolling()
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
@@ -72,6 +78,9 @@ struct DocumentTextView: NSViewRepresentable {
                 scrollView.reflectScrolledClipView(scrollView.contentView)
                 // A selection only means the same thing if the text didn't move under it.
                 if sameText { textView.setSelectedRange(selection) }
+            } else {
+                // Shown again (another tab, another layout): back to where the reader left it, once laid out.
+                coordinator.restore(document.textOffset ?? 0, in: scrollView)
             }
             coordinator.renderToken = renderToken
             coordinator.decorations = nil
@@ -98,8 +107,50 @@ struct DocumentTextView: NSViewRepresentable {
         var renderToken: Int?
         var decorations: [Decoration]?
         var scrollToken = 0
+        /// Where the text opened; scrolling well away from it keeps a preview tab. Nil until restored.
+        private var openedOffset: CGFloat?
+        private var scrollObserver: (any NSObjectProtocol)?
 
         var document: DocumentModel? { parent?.document }
+
+        func observeScrolling(of clipView: NSClipView) {
+            scrollObserver = NotificationCenter.default.addObserver(
+                forName: NSView.boundsDidChangeNotification, object: clipView, queue: .main
+            ) { [weak self, weak clipView] _ in
+                MainActor.assumeIsolated {
+                    guard let clipView else { return }
+                    self?.scrolled(to: clipView.bounds.origin.y)
+                }
+            }
+        }
+
+        func stopObservingScrolling() {
+            if let scrollObserver { NotificationCenter.default.removeObserver(scrollObserver) }
+            scrollObserver = nil
+        }
+
+        func restore(_ offset: CGFloat, in scrollView: NSScrollView) {
+            openedOffset = nil
+            DispatchQueue.main.async { [weak self, weak scrollView] in
+                guard let scrollView, let textView = scrollView.documentView as? NSTextView,
+                      let container = textView.textContainer else { return }
+                if offset > 0 {
+                    textView.layoutManager?.ensureLayout(for: container)
+                    scrollView.contentView.scroll(to: NSPoint(x: 0, y: offset))
+                    scrollView.reflectScrolledClipView(scrollView.contentView)
+                }
+                self?.openedOffset = scrollView.contentView.bounds.origin.y
+            }
+        }
+
+        private func scrolled(to offset: CGFloat) {
+            guard let opened = openedOffset, let document else { return }
+            document.textOffset = offset
+            if abs(offset - opened) > 120 {
+                openedOffset = .infinity
+                document.onNavigated()
+            }
+        }
 
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let textView else { return }

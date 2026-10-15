@@ -1,3 +1,4 @@
+import AppKit
 import JulliaCore
 import SwiftUI
 
@@ -16,6 +17,33 @@ struct JulliaCommands: Commands {
                 model.rescanAll()
             }
             .keyboardShortcut("r")
+        }
+
+        CommandGroup(replacing: .saveItem) {
+            Button("Fechar aba") { model.closeFocusedTab() }
+                .keyboardShortcut("w")
+            Button("Fechar janela") { NSApp.keyWindow?.performClose(nil) }
+                .keyboardShortcut("w", modifiers: [.command, .shift])
+        }
+
+        CommandMenu("Abas") {
+            Button("Próxima aba") { model.workspace.selectAdjacentTab(1) }
+                .keyboardShortcut("]", modifiers: [.command, .shift])
+            Button("Aba anterior") { model.workspace.selectAdjacentTab(-1) }
+                .keyboardShortcut("[", modifiers: [.command, .shift])
+            Menu("Ir para a aba") {
+                ForEach(1..<9) { number in
+                    Button("Aba \(number)") { model.workspace.selectTab(at: number - 1) }
+                        .keyboardShortcut(KeyEquivalent(Character("\(number)")), modifiers: .command)
+                }
+                Button("Última aba") { model.workspace.selectTab(at: model.workspace.tabs.count - 1) }
+                    .keyboardShortcut("9", modifiers: .command)
+            }
+            Divider()
+            Button("Manter aba") { if let tab = model.workspace.focusedTab { model.workspace.pin(tab) } }
+                .disabled(model.workspace.focusedTab?.isPreview != true)
+            Button("Fechar aba") { model.closeFocusedTab() }
+                .disabled(model.workspace.focusedTab == nil)
         }
 
         CommandMenu("Anotar") {

@@ -3,7 +3,7 @@ import JulliaCore
 import Observation
 import UniformTypeIdentifiers
 
-/// The window's state: the folders in the sidebar, recent files, the open document and annotation counts.
+/// The window's state: the folders in the sidebar, recent files, the open tabs and panes, and annotation counts.
 @MainActor @Observable
 final class AppModel {
     static let shared = AppModel()
@@ -14,7 +14,10 @@ final class AppModel {
 
     private(set) var roots: [FileNode] = []
     private(set) var recents: [URL] = []
-    private(set) var document: DocumentModel?
+    /// The open tabs and the panes showing them.
+    let workspace = Workspace()
+    /// The focused pane's document: the one the inspector, the menus and the shortcuts act on.
+    var document: DocumentModel? { workspace.focusedTab?.document }
     /// Annotations per document key, for the badges in the file sidebar.
     private(set) var counts: [String: Int] = [:]
 
@@ -40,6 +43,8 @@ final class AppModel {
     @ObservationIgnored private var folderWatchers: [URL: FolderWatcher] = [:]
     @ObservationIgnored private var looseWatcher: FolderWatcher?
     @ObservationIgnored private let defaults: UserDefaults
+    /// The document the sidebar last followed, so only a change of document moves it.
+    @ObservationIgnored private var revealed: URL?
     static let maxRecents = 8
     /// How deep a folder outside the roots is scanned: enough for a course folder, not a whole home folder.
     static let looseDepth = 4
@@ -64,58 +69,115 @@ final class AppModel {
         recents = (defaults.stringArray(forKey: "recents") ?? [])
             .map { URL(fileURLWithPath: $0) }
             .filter { FileManager.default.fileExists(atPath: $0.path) }
+        workspace.load = { [weak self] tab in self?.load(tab) }
+        workspace.unload = { tab in
+            tab.document?.chat.cancel()
+            tab.document = nil
+        }
+        workspace.onChange = { [weak self] in self?.workspaceChanged() }
         if settings.reopenFolders {
             for path in defaults.stringArray(forKey: "folders") ?? [] {
                 let url = URL(fileURLWithPath: path, isDirectory: true)
                 if FileManager.default.fileExists(atPath: url.path) { addFolder(url, persist: false) }
             }
-            if let last = defaults.string(forKey: "lastFile"), FileManager.default.fileExists(atPath: last) {
-                openFile(URL(fileURLWithPath: last))
-            }
+            restoreSession()
         }
         browser.onFolderChange = { [weak self] in self?.syncLooseFolder() }
         if browser.folder == nil { browser.show(roots.first?.url) }
         syncLooseFolder()
     }
 
-    var renderOptions: RenderOptions {
-        RenderOptions(theme: settings.theme, fontSize: settings.fontSize, baseURL: document?.url.deletingLastPathComponent())
+    /// Links and images in a Markdown file resolve against its own folder.
+    func renderOptions(for url: URL) -> RenderOptions {
+        RenderOptions(theme: settings.theme, fontSize: settings.fontSize, baseURL: url.deletingLastPathComponent())
     }
 
     // MARK: Opening
 
-    /// Opens whatever was handed over: a folder goes to the sidebar, a Markdown or PDF file opens.
+    /// Opens whatever was handed over: a folder goes to the sidebar, a Markdown or PDF file opens in a kept tab.
     func open(_ url: URL) {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else { return }
         if isDirectory.boolValue {
             addFolder(url)
         } else {
-            openFile(url)
+            openFile(url, as: .permanent)
         }
     }
 
-    func openFile(_ url: URL) {
-        guard document?.url != url else { return }
-        document?.chat.cancel()
-        let document = DocumentModel(url: url, store: store)
-        document.onAnnotationsChanged = { [weak self] in self?.refreshCounts() }
-        document.onChatStarted = { [weak self] in self?.revealChat() }
-        document.watch { [weak self] in self?.settings.liveReload ?? false }
-        self.document = document
-        document.apply(renderOptions)
-        browser.reveal(url)
-
-        recents.removeAll { $0 == url }
+    /// Opens a file in a tab: by default the preview tab, which the next file from the sidebar replaces.
+    func openFile(_ url: URL, as kind: OpenKind = .preview) {
+        workspace.open(url, as: kind)
+        recents.removeAll { $0.standardizedFileURL == url.standardizedFileURL }
         recents.insert(url, at: 0)
         recents = Array(recents.prefix(Self.maxRecents))
         defaults.set(recents.map(\.path), forKey: "recents")
-        defaults.set(url.path, forKey: "lastFile")
     }
 
-    /// Re-renders the open document after a theme or font change.
+    /// Whether a file is open in a tab, for the dot in the sidebar.
+    func isOpen(_ url: URL) -> Bool {
+        workspace.tab(for: url) != nil
+    }
+
+    /// The document a tab shows, made when the tab is first shown. Annotating it or moving through it keeps a
+    /// preview tab.
+    private func load(_ tab: DocumentTab) {
+        let document = DocumentModel(url: tab.url, store: store)
+        document.onAnnotationsChanged = { [weak self, weak tab] in
+            self?.refreshCounts()
+            if let tab { self?.workspace.pin(tab) }
+        }
+        document.onNavigated = { [weak self, weak tab] in
+            if let tab { self?.workspace.pin(tab) }
+        }
+        document.onChatStarted = { [weak self] in self?.revealChat() }
+        document.watch { [weak self] in self?.settings.liveReload ?? false }
+        tab.document = document
+        document.apply(renderOptions(for: tab.url))
+    }
+
+    /// Re-renders every open document after a theme or font change.
     func rerender() {
-        document?.apply(renderOptions)
+        for tab in workspace.tabs { tab.document?.apply(renderOptions(for: tab.url)) }
+    }
+
+    /// ⌘W: the focused tab, or the window when no tab is open.
+    func closeFocusedTab() {
+        if let tab = workspace.focusedTab {
+            workspace.close(tab)
+        } else {
+            NSApp.keyWindow?.performClose(nil)
+        }
+    }
+
+    // MARK: Session
+
+    private func workspaceChanged() {
+        if let url = document?.url, url != revealed {
+            revealed = url
+            browser.reveal(url)
+        }
+        saveSession()
+    }
+
+    func saveSession() {
+        defaults.set(try? JSONEncoder().encode(workspace.session), forKey: "session")
+        if let url = document?.url { defaults.set(url.path, forKey: "lastFile") }
+    }
+
+    /// Reopens the saved tabs and panes; before tabs existed, the last file.
+    private func restoreSession() {
+        if let data = defaults.data(forKey: "session"), let session = try? JSONDecoder().decode(Session.self, from: data) {
+            workspace.restore(session)
+        } else if let last = defaults.string(forKey: "lastFile"), FileManager.default.fileExists(atPath: last) {
+            openFile(URL(fileURLWithPath: last), as: .permanent)
+        }
+    }
+
+    /// Before quitting: stops every answer being written and saves the tabs.
+    func prepareToQuit() {
+        for tab in workspace.tabs { tab.document?.chat.cancel() }
+        saveSession()
     }
 
     func presentOpenPanel() {
