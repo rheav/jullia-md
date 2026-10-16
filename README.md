@@ -6,9 +6,14 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.13.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.14.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.14.0
+
+- **Sumário**: nova aba do painel direito com os títulos do Markdown e o índice do PDF; um clique leva ao trecho. Em PDFs, **Páginas** mostra as miniaturas, com a página atual destacada.
+- **Ir para a página** em PDFs: **⌥⌘G** ou um clique em "Página X de Y" na barra do PDF.
 
 ## Novidades da versão 0.13.0
 
@@ -174,6 +179,12 @@ PDFs protegidos pedem senha, que não é salva. PDFs sem texto extraível podem 
 
 Após uma alteração externa, o app tenta reencontrar cada trecho pelo texto e pelo contexto das páginas. Se parte da seleção desaparecer, a anotação fica em **Órfãos**. A recuperação é aproximada e depende do texto extraído pelo PDFKit.
 
+### Sumário e páginas
+
+A aba **Sumário** do painel direito, também em **Visualizar → Mostrar sumário** ou no ícone de lista da barra recolhida, mostra os títulos do Markdown recuados pelo nível. Um clique leva o título ao alto da tela. Em PDFs, **Índice** mostra o índice gravado no próprio arquivo, quando ele tem um, e **Páginas** mostra as miniaturas em duas colunas: a página atual fica destacada e acompanha a leitura, e um clique vai à página. Um PDF sem índice abre direto nas páginas.
+
+**Visualizar → Ir para a página…** (**⌥⌘G**), ou um clique em "Página X de Y" na barra do PDF, pede o número da página.
+
 ### Buscar
 
 **Editar → Buscar → Buscar…** ou **⌘F** busca no documento do painel focado. No Markdown, abre a barra de busca do macOS acima do texto; **Return** ou **⌘G** seleciona o resultado seguinte e **⇧⌘G** o anterior, e o resultado selecionado pode ser destacado, comentado ou copiado como qualquer seleção. No PDF, abre uma barra própria abaixo da barra do PDF: todos os resultados ficam marcados, o atual fica selecionado e a contagem mostra qual é ("3 de 12"); a busca ignora maiúsculas e acentos e começa na página em que você está. **Return** ou **⌘G** vai ao seguinte e **⇧⌘G** ao anterior, voltando ao início depois do último. **Esc** ou **OK** fecham a barra, inclusive no modo zen.
@@ -245,6 +256,7 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌘F | Buscar no documento do painel focado |
 | ⌘G / ⇧⌘G | Resultado seguinte / anterior |
 | ⌘E | Buscar o texto selecionado |
+| ⌥⌘G | Ir para uma página do PDF |
 | ⌘P | Imprimir o documento do painel focado |
 | ⇧⌘P | Configurar página |
 | ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior |

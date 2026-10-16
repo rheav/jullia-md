@@ -30,6 +30,18 @@ import Testing
         Fim.
         """
 
+    @Test func headingsAreFoundWithTheirLevelsAndPlaces() {
+        let source = "# Livro\n\nIntrodução.\n\n## Parte *um*\n\nTexto.\n\n> ### Citado\n\n#### Fundo\n"
+        let rendered = MarkdownRenderer.render(source, options: RenderOptions(theme: .snow))
+        let headings = MarkdownRenderer.headings(in: rendered)
+        #expect(headings.map(\.title) == ["Livro", "Parte um", "Citado", "Fundo"])
+        #expect(headings.map(\.level) == [1, 2, 3, 4])
+        let text = rendered.string as NSString
+        #expect(headings.map { text.substring(with: $0.range) } == ["Livro", "Parte um", "Citado", "Fundo"])
+        #expect(rendered.string == MarkdownRenderer.plainText(source))
+        #expect(MarkdownRenderer.headings(in: MarkdownRenderer.render("Sem títulos.", options: RenderOptions(theme: .snow))).isEmpty)
+    }
+
     @Test func textDoesNotDependOnThemeOrSize() {
         let polar = MarkdownRenderer.render(source, options: RenderOptions(theme: .polar, fontSize: 15)).string
         let paper = MarkdownRenderer.render(source, options: RenderOptions(theme: .paper, fontSize: 21)).string

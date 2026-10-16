@@ -103,6 +103,8 @@ struct JulliaCommands: Commands {
             Button(model.commentsCollapsed ? "Expandir comentários" : "Recolher comentários") { model.commentsCollapsed.toggle() }
                 .keyboardShortcut("0", modifiers: [.command, .option])
                 .disabled(model.zen)
+            Button("Mostrar sumário") { model.revealOutline() }
+                .disabled(model.document == nil)
             Button(model.zen ? "Sair do modo zen" : "Modo zen") { model.toggleZen() }
                 .keyboardShortcut("z", modifiers: [.command, .control])
                 .disabled(!model.canZen)
@@ -126,6 +128,9 @@ struct JulliaCommands: Commands {
                 if model.document?.isPDF == true { model.document?.zoomPDF(0) } else { model.settings.fontSize = 16 }
             }
                 .keyboardShortcut("0")
+            Button("Ir para a página…") { model.document?.askingForPage = true }
+                .keyboardShortcut("g", modifiers: [.command, .option])
+                .disabled(model.document?.isPDF != true || !model.documentReady)
             Divider()
         }
     }

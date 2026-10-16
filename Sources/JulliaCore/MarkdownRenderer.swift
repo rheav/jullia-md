@@ -30,6 +30,27 @@ public enum MarkdownRenderer {
     public static func plainText(_ source: String) -> String {
         render(source, options: RenderOptions(theme: .polar)).string
     }
+
+    /// Marks a heading's text with its level, 1 to 6, for the table of contents.
+    public static let headingLevel = NSAttributedString.Key("JulliaHeadingLevel")
+
+    /// The headings of rendered text, in reading order.
+    public static func headings(in text: NSAttributedString) -> [OutlineHeading] {
+        var result: [OutlineHeading] = []
+        text.enumerateAttribute(headingLevel, in: NSRange(location: 0, length: text.length)) { value, range, _ in
+            guard let level = value as? Int else { return }
+            let title = (text.string as NSString).substring(with: range).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !title.isEmpty { result.append(OutlineHeading(title: title, level: level, range: range)) }
+        }
+        return result
+    }
+}
+
+/// A heading of the rendered text: its words, its level and where they are.
+public struct OutlineHeading: Equatable, Sendable {
+    public var title: String
+    public var level: Int
+    public var range: NSRange
 }
 
 // MARK: - Builder
@@ -82,7 +103,10 @@ private final class Builder {
             let scale = scales[min(max(heading.level, 1), 6) - 1]
             paragraph(context: context, spacingBefore: output.length == 0 ? 0 : size * (heading.level <= 2 ? 1.2 : 0.9),
                       spacingAfter: size * 0.45, lineHeight: 1.15) { text in
+                // After a list marker, if the heading starts a list item.
+                let start = text.length
                 inlines(heading.children, style: Inline(bold: true, scale: scale, color: theme.heading.ns), into: text)
+                text.addAttribute(MarkdownRenderer.headingLevel, value: heading.level, range: NSRange(location: start, length: text.length - start))
             }
 
         case let paragraph as Paragraph:

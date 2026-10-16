@@ -26,7 +26,7 @@ final class AppModel {
     /// A folded panel shrinks to a rail of icons.
     var filesCollapsed: Bool { didSet { defaults.set(filesCollapsed, forKey: "filesCollapsed") } }
     var commentsCollapsed: Bool { didSet { defaults.set(commentsCollapsed, forKey: "commentsCollapsed") } }
-    enum InspectorTab: String, CaseIterable { case comments = "Comentários", chat = "Chat com IA" }
+    enum InspectorTab: String, CaseIterable { case comments = "Comentários", chat = "Chat com IA", outline = "Sumário" }
     var inspectorTab: InspectorTab = .comments
     var fileQuery = ""
     /// Zen: only the documents on screen — no panels, rails, tabs, pane headers or window buttons. Not saved: the
@@ -383,6 +383,13 @@ final class AppModel {
     /// A click on a commented passage: the comments tab is the one shown, and a folded panel stays folded.
     func selectCommentsTab() {
         inspectorTab = .comments
+    }
+
+    /// The table of contents, expanding the panel. Leaves zen.
+    func revealOutline() {
+        setZen(false)
+        inspectorTab = .outline
+        commentsCollapsed = false
     }
 
     func revealChat() {

@@ -100,7 +100,14 @@ struct DocumentTextView: NSViewRepresentable {
         if let request = scrollRequest, request.token != coordinator.scrollToken,
            NSMaxRange(request.range) <= textView.string.utf16.count {
             coordinator.scrollToken = request.token
-            textView.scrollRangeToVisible(request.range)
+            if request.atTop, let layoutManager = textView.layoutManager, let container = textView.textContainer {
+                layoutManager.ensureLayout(for: container)
+                let glyphs = layoutManager.glyphRange(forCharacterRange: request.range, actualCharacterRange: nil)
+                let rect = layoutManager.boundingRect(forGlyphRange: glyphs, in: container)
+                textView.scroll(NSPoint(x: 0, y: max(0, rect.minY + textView.textContainerOrigin.y - 24)))
+            } else {
+                textView.scrollRangeToVisible(request.range)
+            }
             textView.showFindIndicator(for: request.range)
         }
 

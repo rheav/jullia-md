@@ -22,6 +22,10 @@ A seleção nativa alimenta as mesmas ações e a mesma sidebar usadas no Markdo
 
 O esquema SQLite v2 acrescenta a coluna opcional `pdf_anchor` às tabelas de destaques e comentários. A migração é aditiva e transacional, e preserva registros Markdown; os metadados PDF são JSON. A senha de PDFs protegidos é usada apenas para desbloquear o documento em memória. OCR e exportação de anotações não fazem parte desta implementação.
 
+## Sumário
+
+O renderer marca o texto de cada título com o atributo `MarkdownRenderer.headingLevel`; `MarkdownRenderer.headings` os lê de volta com nível e posição, sem mudar o texto, então as âncoras não são afetadas. `DocumentModel.outline` reúne esses títulos, ou o índice (`outlineRoot`) do PDF percorrido em profundidade, cada item com o destino da página. Um título vai ao alto do texto por um `ScrollRequest` com `atTop`; uma página vai ao PDF por `PDFPageRequest`, com token, que um leitor recriado não repete. `OutlineSidebar` é a terceira aba do inspector; as miniaturas são desenhadas por `PDFPage.thumbnail` quando entram na grade preguiçosa. O PDFKit não grava um índice montado em memória; os testes geram o PDF com índice pelo Core Graphics (`CGPDFContextSetOutline`).
+
 ## Busca
 
 Os comandos de busca (`FindAction`) vão ao documento do painel focado. No Markdown, `DocumentModel.findRequest` leva cada comando, com um token, ao `NSTextView`, que o executa com `performTextFinderAction` na barra de busca do AppKit; um leitor recriado não repete o último comando. A busca incremental fica desligada: com ela, Return e ⌘G não moviam a seleção, e destacar ou comentar um resultado depende dela. O PDFKit não tem barra de busca; `PDFFind` guarda o termo, os resultados de `PDFDocument.findString` sem distinção de maiúsculas e acentos e o resultado atual, e é reapontado para o novo `PDFDocument` a cada recarga. `AnnotatedPDFView` marca os resultados com `highlightedSelections` e seleciona o atual sem abrir a barra de marcação, que ficaria sobre ele. Os dois usam a área de busca compartilhada do macOS. No modo zen, o monitor de Esc deixa a tecla para um campo em edição, como a barra de busca.

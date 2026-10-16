@@ -25,6 +25,29 @@ struct ScrollRequest: Equatable {
     var range: NSRange
     var token: Int
     var anchor: TextAnchor? = nil
+    /// Brings the range to the top of the view, as a heading from the table of contents, instead of just into it.
+    var atTop = false
+}
+
+/// A page of the PDF to show, and where on it (PDF coordinates), with a token so each request is carried out once.
+struct PDFPageRequest: Equatable {
+    var page: Int
+    var point: CGPoint?
+    var token: Int
+}
+
+/// One entry of the table of contents: a Markdown heading, or an item of the PDF's own outline.
+struct OutlineItem: Identifiable, Equatable {
+    enum Target: Equatable {
+        case text(NSRange)
+        case page(Int, CGPoint?)
+    }
+
+    let id: Int
+    let title: String
+    /// 1 for the top level.
+    let level: Int
+    let target: Target
 }
 
 /// A comment being written: about a passage, or about the whole document when `anchor` is nil.
@@ -46,6 +69,9 @@ final class DocumentModel {
     var pdfPageNumber = 1
     private(set) var pdfZoomToken = 0
     private(set) var pdfZoomDirection = 0
+    private(set) var pdfPageRequest: PDFPageRequest?
+    /// The "Ir para a página" alert is up.
+    var askingForPage = false
     var hasPDFText: Bool { pdfIndex?.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
     /// The PDF's find bar. Markdown uses the text view's own, through `findRequest`.
     let pdfFind = PDFFind()
@@ -66,6 +92,8 @@ final class DocumentModel {
     var composing: Composing?
     private(set) var scrollRequest: ScrollRequest?
     private(set) var findRequest: FindRequest?
+    /// The table of contents.
+    private(set) var outline: [OutlineItem] = []
 
     /// The text view's selection, kept for menu commands. Not observed: it changes on every drag.
     @ObservationIgnored var selection = NSRange(location: 0, length: 0) {
@@ -92,6 +120,7 @@ final class DocumentModel {
     @ObservationIgnored private var watcher: FileWatcher?
     @ObservationIgnored private var scrollToken = 0
     @ObservationIgnored private var findToken = 0
+    @ObservationIgnored private var pageToken = 0
 
     var text: NSString { pdfIndex?.text ?? (rendered.string as NSString) }
 
@@ -167,7 +196,13 @@ final class DocumentModel {
 
     private func render() {
         guard let options else { return }
-        if !isPDF { rendered = MarkdownRenderer.render(source, options: options) }
+        if !isPDF {
+            rendered = MarkdownRenderer.render(source, options: options)
+            let headings = MarkdownRenderer.headings(in: rendered)
+            outline = headings.enumerated().map { index, heading in
+                OutlineItem(id: index, title: heading.title, level: heading.level, target: .text(heading.range))
+            }
+        }
         renderToken += 1
     }
 
@@ -178,6 +213,45 @@ final class DocumentModel {
             return
         }
         pdfIndex = PDFTextIndex(document: pdfDocument)
+        outline = Self.outline(of: pdfDocument)
+    }
+
+    /// The PDF's own outline, depth first, each item with its depth and destination. Items without one are kept as
+    /// headings of the ones inside them, pointing at the first page.
+    private static func outline(of document: PDFDocument) -> [OutlineItem] {
+        var items: [OutlineItem] = []
+        func walk(_ node: PDFOutline, level: Int) {
+            for index in 0..<node.numberOfChildren {
+                guard let child = node.child(at: index) else { continue }
+                let destination = child.destination ?? (child.action as? PDFActionGoTo)?.destination
+                let page = destination?.page.map { document.index(for: $0) } ?? 0
+                let title = (child.label ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                if !title.isEmpty {
+                    items.append(OutlineItem(id: items.count, title: title, level: level, target: .page(page, destination?.point)))
+                }
+                walk(child, level: level + 1)
+            }
+        }
+        if let root = document.outlineRoot { walk(root, level: 1) }
+        return items
+    }
+
+    /// From the table of contents: a heading to the top of the text, an outline item to its place in the PDF.
+    func go(to item: OutlineItem) {
+        switch item.target {
+        case .text(let range):
+            scrollToken += 1
+            scrollRequest = ScrollRequest(range: range, token: scrollToken, atTop: true)
+        case .page(let page, let point):
+            goToPDFPage(page, at: point)
+        }
+    }
+
+    /// A page of the PDF, zero-based, kept within the document.
+    func goToPDFPage(_ index: Int, at point: CGPoint? = nil) {
+        guard let count = pdfDocument?.pageCount, count > 0 else { return }
+        pageToken += 1
+        pdfPageRequest = PDFPageRequest(page: min(max(index, 0), count - 1), point: point, token: pageToken)
     }
 
     func unlockPDF(password: String) {

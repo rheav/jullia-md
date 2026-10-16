@@ -18,10 +18,10 @@ struct InspectorSidebar: View {
             .labelsHidden()
             .padding(.horizontal, 12)
             .padding(.top, 12)
-            if model.inspectorTab == .comments {
-                CommentsSidebar(document: document, theme: theme)
-            } else {
-                ChatSidebar(document: document, theme: theme).id(document.key)
+            switch model.inspectorTab {
+            case .comments: CommentsSidebar(document: document, theme: theme)
+            case .chat: ChatSidebar(document: document, theme: theme).id(document.key)
+            case .outline: OutlineSidebar(document: document, theme: theme).id(document.key)
             }
         }
     }

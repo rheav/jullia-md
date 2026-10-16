@@ -127,6 +127,9 @@ struct CommentsRail: View {
             RailButton(symbol: "sparkles", help: "Chat com IA", theme: theme) {
                 model.revealChat()
             }
+            RailButton(symbol: "list.bullet", help: "Sumário", theme: theme) {
+                model.revealOutline()
+            }
             Spacer(minLength: 0)
         }
         .padding(.vertical, 8)

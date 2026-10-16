@@ -8,8 +8,10 @@ struct PDFReader: View {
     let theme: Theme
     @Environment(AppModel.self) private var model
     @State private var password = ""
+    @State private var pageText = ""
 
     var body: some View {
+        @Bindable var document = document
         if document.pdfLocked {
             VStack(spacing: 14) {
                 Image(systemName: "lock.doc").font(.system(size: 36))
@@ -30,15 +32,30 @@ struct PDFReader: View {
                 // In zen the space around the pages is the window's glass, as nothing else is left on screen.
                 DocumentPDFView(document: document, theme: theme, appModel: model, seeThrough: model.zen)
             }
+            .alert("Ir para a página", isPresented: $document.askingForPage) {
+                TextField("Página", text: $pageText)
+                Button("Ir") { goToTypedPage() }
+                Button("Cancelar", role: .cancel) { pageText = "" }
+            } message: {
+                Text("De 1 a \(document.pdfDocument?.pageCount ?? 0).")
+            }
         }
+    }
+
+    private func goToTypedPage() {
+        if let number = Int(pageText.trimmingCharacters(in: .whitespaces)) { document.goToPDFPage(number - 1) }
+        pageText = ""
     }
 
     /// The page number, zoom, and a note when the PDF has no text. Not in zen.
     @ViewBuilder
     private var toolbar: some View {
         HStack(spacing: 12) {
-            Text("Página \(document.pdfPageNumber) de \(document.pdfDocument?.pageCount ?? 0)")
-                .monospacedDigit()
+            Button { document.askingForPage = true } label: {
+                Text("Página \(document.pdfPageNumber) de \(document.pdfDocument?.pageCount ?? 0)")
+                    .monospacedDigit()
+            }
+            .help("Ir para a página (⌥⌘G)")
             Spacer()
             Button { document.zoomPDF(-1) } label: { Image(systemName: "minus.magnifyingglass") }
                 .help("Diminuir zoom (⌘−)")
@@ -150,6 +167,7 @@ final class AnnotatedPDFView: PDFView {
     private var scrollToken = 0
     private var zoomToken = 0
     private var findToken = 0
+    private var pageToken = 0
     private var showsMatches = false
     /// Selecting a match found: no marking pill, which would sit on the match at the top of the view.
     private var revealingMatch = false
@@ -222,7 +240,11 @@ final class AnnotatedPDFView: PDFView {
             } else if let document, let page = document.page(at: min(previousPage, max(0, document.pageCount - 1))) {
                 go(to: page)
             }
-            if firstAttach { openedPage = model.pdfPosition?.page ?? 0 }
+            if firstAttach {
+                openedPage = model.pdfPosition?.page ?? 0
+                // A page asked for before this view existed was already shown, or the reader moved on since.
+                pageToken = model.pdfPageRequest?.token ?? 0
+            }
             decorations = []
             hidePill()
             pageChanged()
@@ -252,6 +274,17 @@ final class AnnotatedPDFView: PDFView {
             }
         }
         showFind(model.pdfFind)
+        if let request = model.pdfPageRequest, pageToken != request.token {
+            pageToken = request.token
+            if let page = document?.page(at: request.page) {
+                if let point = request.point {
+                    go(to: PDFDestination(page: page, at: point))
+                } else {
+                    go(to: page)
+                }
+                hidePill()
+            }
+        }
         if zoomToken != model.pdfZoomToken {
             zoomToken = model.pdfZoomToken
             fitsPane = false
