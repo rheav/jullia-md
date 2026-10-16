@@ -254,6 +254,35 @@ final class DocumentModel {
         return result
     }
 
+    /// The Markdown as it goes on paper: rendered again with `options`, with the link colour, the highlights and the
+    /// open comments' underlines set on the text itself. On screen they are the text view's temporary attributes,
+    /// which are not printed.
+    func printableText(options: RenderOptions) -> NSAttributedString {
+        let text = NSMutableAttributedString(attributedString: MarkdownRenderer.render(source, options: options))
+        let length = text.length
+        let theme = options.theme
+        text.enumerateAttribute(.link, in: NSRange(location: 0, length: length)) { link, range, _ in
+            guard link != nil else { return }
+            text.addAttributes([
+                .foregroundColor: theme.link.ns,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .underlineColor: theme.link.ns.withAlphaComponent(0.4),
+            ], range: range)
+        }
+        for highlight in highlights {
+            guard let range = highlightRanges[highlight.id], NSMaxRange(range) <= length else { continue }
+            text.addAttribute(.backgroundColor, value: theme.tone(highlight.color).fill.ns, range: range)
+        }
+        for comment in topLevelComments where !comment.isResolved {
+            guard let range = commentRanges[comment.id], NSMaxRange(range) <= length else { continue }
+            text.addAttributes([
+                .underlineStyle: NSUnderlineStyle.thick.rawValue,
+                .underlineColor: theme.tone(comment.color ?? .yellow).stroke.ns,
+            ], range: range)
+        }
+        return text
+    }
+
     func scroll(to range: NSRange, anchor: TextAnchor? = nil) {
         scrollToken += 1
         scrollRequest = ScrollRequest(range: range, token: scrollToken, anchor: anchor)

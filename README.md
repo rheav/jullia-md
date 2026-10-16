@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.10.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.11.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.11.0
+
+- **Imprimir**: **⌘P** abre o painel de impressão do macOS para o documento do painel focado, com prévia, escolha de páginas e **Salvar como PDF**; **⇧⌘P** abre **Configurar página**. O Markdown sai em tema claro, com os destaques e os sublinhados dos comentários; o PDF sai com as próprias páginas.
 
 ## Novidades da versão 0.10.0
 
@@ -156,6 +160,12 @@ PDFs protegidos pedem senha, que não é salva. PDFs sem texto extraível podem 
 
 Após uma alteração externa, o app tenta reencontrar cada trecho pelo texto e pelo contexto das páginas. Se parte da seleção desaparecer, a anotação fica em **Órfãos**. A recuperação é aproximada e depende do texto extraído pelo PDFKit.
 
+### Imprimir
+
+**File → Imprimir…** ou **⌘P** imprime o documento do painel focado pelo painel nativo do macOS, que também salva em PDF pelo menu **PDF**. **Configurar página…** (**⇧⌘P**) escolhe o papel e a orientação.
+
+O Markdown é diagramado de novo para o papel: os temas escuros saem no claro equivalente (Polar como Snow, Ink como Paper), sem o fundo do tema, com margens de 2 cm e o texto em três quartos do tamanho da tela, como num navegador: 16 pt na tela viram 12 pt no papel. As páginas quebram entre linhas. Destaques e sublinhados de comentários abertos são impressos; os cards de comentários não. Um PDF imprime as próprias páginas, reduzidas para caber no papel quando necessário, com os destaques do Jullia.
+
 ### Chat com IA
 
 Selecione um trecho e clique em **✨**, escolha **Conversar sobre trecho** no menu contextual ou pressione **⌥⌘I**. A aba **Chat com IA** abre no painel da direita, com a citação fixa acima da conversa. Faça perguntas sucessivas, use **⌘Return** para enviar e **Parar** para interromper uma resposta.
@@ -212,6 +222,8 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⇧⌘O | Adicionar pasta |
 | ⌘R | Recarregar documento e pastas |
 | ⌘W | Fechar a aba; sem abas, a janela |
+| ⌘P | Imprimir o documento do painel focado |
+| ⇧⌘P | Configurar página |
 | ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior |
 | ⌘1 … ⌘8 / ⌘9 | Ir para a aba N / para a última aba |
 | ⌥⌘1 … ⌥⌘5 | Um painel / 2, 3 ou 4 colunas / grade 2×2 |

@@ -24,6 +24,13 @@ struct JulliaCommands: Commands {
                 .keyboardShortcut("w")
             Button("Fechar janela") { NSApp.keyWindow?.performClose(nil) }
                 .keyboardShortcut("w", modifiers: [.command, .shift])
+            // Here and not in `.printItem`: a `Window` scene's File menu has no print group to replace.
+            Divider()
+            Button("Configurar página…") { NSApp.runPageLayout(nil) }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+            Button("Imprimir…") { model.printDocument() }
+                .keyboardShortcut("p")
+                .disabled(!model.canPrint)
         }
 
         CommandMenu("Abas") {

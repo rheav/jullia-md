@@ -179,6 +179,26 @@ final class AppModel {
         }
     }
 
+    // MARK: Printing
+
+    /// Whether the focused document has something to print: read, and unlocked if it is a protected PDF.
+    var canPrint: Bool {
+        guard let document else { return false }
+        return document.loadError == nil && !document.pdfLocked
+    }
+
+    /// ⌘P: the focused document, in the print panel as a sheet on the window.
+    func printDocument() {
+        guard let document,
+              let operation = DocumentPrinter.operation(for: document, theme: settings.theme, fontSize: settings.fontSize)
+        else { return NSSound.beep() }
+        if let window = NSApp.mainWindow ?? NSApp.keyWindow {
+            operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+        } else {
+            operation.run()
+        }
+    }
+
     // MARK: Session
 
     private func workspaceChanged() {
