@@ -36,6 +36,8 @@ Os comandos de busca (`FindAction`) vão ao documento do painel focado. No Markd
 
 Uma `TextAnchor` contém offsets UTF-16, a citação e contexto anterior e posterior. `Anchoring.resolve` tenta a posição original e, depois, procura a citação usando o contexto para escolher entre ocorrências. Quando encontra o trecho em outra posição, `DocumentModel` atualiza os offsets. Se não o encontra, mantém a anotação como órfã.
 
+Cada mudança de `DocumentModel` nas anotações registra a sua inversa no undo manager da janela, que `MainView` passa ao `AppModel`; a inversa também é uma mudança, então registra o refazer, com o mesmo nome. O NSWindow trata `undo:` com o próprio undo manager, não com o do primeiro respondedor, por isso a pilha é uma só por janela, junto com a digitação dos campos. Itens restaurados voltam com o mesmo identificador; um comentário apagado volta com as respostas. Antes de desfazer, o documento chama `onUndo`, que traz a aba dele para a frente. Ao descarregar uma aba, `AppModel` retira da pilha as ações daquele documento.
+
 O banco não escreve nos documentos. A chave de um documento é seu caminho padronizado com symlinks resolvidos, não um identificador que acompanhe mudanças de nome.
 
 ## Estado e observação

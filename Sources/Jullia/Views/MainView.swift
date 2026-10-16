@@ -16,6 +16,7 @@ struct MainView: View {
     @Environment(AppModel.self) private var model
     @Environment(AppSettings.self) private var settings
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.undoManager) private var undoManager
 
     private struct RenderKey: Equatable {
         var theme: ThemeID
@@ -94,7 +95,11 @@ struct MainView: View {
         .ignoresSafeArea()
         .tint(theme.accent.color)
         .frame(minWidth: 760, minHeight: 480)
-        .onAppear { applyAppearance(theme) }
+        .onAppear {
+            applyAppearance(theme)
+            model.undoManager = undoManager
+        }
+        .onChange(of: undoManager) { model.undoManager = undoManager }
         .onChange(of: theme.id) { applyAppearance(theme) }
         .onChange(of: RenderKey(theme: theme.id, fontSize: settings.fontSize)) { model.rerender() }
         .onChange(of: model.document?.composing) { if model.document?.composing != nil { model.revealComments() } }

@@ -16,6 +16,8 @@ final class AppModel {
     private(set) var recents: [URL] = []
     /// The open tabs and the panes showing them.
     let workspace = Workspace()
+    /// The window's undo stack, from the main view: annotation changes go on it, beside the typing in its fields.
+    @ObservationIgnored var undoManager: UndoManager?
     /// The focused pane's document: the one the inspector, the menus and the shortcuts act on.
     var document: DocumentModel? { workspace.focusedTab?.document }
     /// Annotations per document key, for the badges in the file sidebar.
@@ -67,8 +69,10 @@ final class AppModel {
             .map { URL(fileURLWithPath: $0) }
             .filter { FileManager.default.fileExists(atPath: $0.path) }
         workspace.load = { [weak self] tab in self?.load(tab) }
-        workspace.unload = { tab in
+        workspace.unload = { [weak self] tab in
             tab.document?.chat.cancel()
+            // Its changes cannot be undone once the document is gone.
+            if let document = tab.document { self?.undoManager?.removeAllActions(withTarget: document) }
             tab.document = nil
         }
         workspace.onChange = { [weak self] in self?.workspaceChanged() }
@@ -160,6 +164,10 @@ final class AppModel {
             if let tab { self?.workspace.pin(tab) }
         }
         document.onChatStarted = { [weak self] in self?.revealChat() }
+        document.undoManager = { [weak self] in self?.undoManager }
+        document.onUndo = { [weak self, weak tab] in
+            if let tab, self?.workspace.focusedTab !== tab { self?.workspace.select(tab) }
+        }
         document.watch { [weak self] in self?.settings.liveReload ?? false }
         tab.document = document
         document.apply(renderOptions(for: tab.url))

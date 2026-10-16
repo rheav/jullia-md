@@ -78,6 +78,10 @@ final class DocumentModel {
     @ObservationIgnored var onChatStarted: () -> Void = {}
     /// Called when the reader moves away from where the document opened: another page, a scroll.
     @ObservationIgnored var onNavigated: () -> Void = {}
+    /// The window's undo stack, where every change to the annotations puts its inverse.
+    @ObservationIgnored var undoManager: () -> UndoManager? = { nil }
+    /// Called before one of this document's changes is undone or redone, so its tab comes forward.
+    @ObservationIgnored var onUndo: () -> Void = {}
     /// Where the reader was, kept while the document's view is not on screen (another tab, another layout).
     @ObservationIgnored var pdfPosition: PDFPosition?
     @ObservationIgnored var textOffset: CGFloat?
@@ -339,6 +343,7 @@ final class DocumentModel {
         try store.insert(comment)
         comments.append(comment)
         if let resolved { commentRanges[id] = resolved.range }
+        registerUndo("Salvar resposta da IA") { $0.deleteComment(id) }
         onAnnotationsChanged()
         return id
     }
@@ -355,27 +360,36 @@ final class DocumentModel {
         for covered in highlights where !isPDF && highlightRanges[covered.id].map({ NSIntersectionRange($0, range) == $0 }) == true {
             removeHighlight(covered.id)
         }
-        let highlight = Highlight(docPath: key, anchor: anchor, color: color)
+        insert(Highlight(docPath: key, anchor: anchor, color: color), named: "Destaque")
+    }
+
+    /// A new highlight, or one brought back by undo, with the same identifier.
+    private func insert(_ highlight: Highlight, named name: String) {
         do {
             try store?.insert(highlight)
-            highlights.append(highlight)
-            highlightRanges[highlight.id] = range
-            onAnnotationsChanged()
         } catch {
-            NSSound.beep()
+            return NSSound.beep()
         }
+        highlights.append(highlight)
+        if let anchor = resolvedAnchor(highlight.anchor) { highlightRanges[highlight.id] = anchor.range }
+        registerUndo(name) { $0.removeHighlight(highlight.id) }
+        onAnnotationsChanged()
     }
 
     func recolorHighlight(_ id: String, to color: MarkColor) {
         guard let index = highlights.firstIndex(where: { $0.id == id }) else { return }
+        let old = highlights[index].color
         try? store?.setColor(color, ofHighlight: id)
         highlights[index].color = color
+        registerUndo("Cor do destaque") { $0.recolorHighlight(id, to: old) }
     }
 
     func removeHighlight(_ id: String) {
+        guard let removed = highlights.first(where: { $0.id == id }) else { return }
         try? store?.deleteHighlight(id)
         highlights.removeAll { $0.id == id }
         highlightRanges[id] = nil
+        registerUndo("Remover destaque") { $0.insert(removed, named: "Destaque") }
         onAnnotationsChanged()
     }
 
@@ -430,54 +444,96 @@ final class DocumentModel {
     func submitComment(body: String, color: MarkColor?) {
         guard let composing, !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let comment = Comment(docPath: key, anchor: composing.anchor, body: body, color: color)
-        do {
-            try store?.insert(comment)
-            comments.append(comment)
-            if let anchor = composing.anchor { commentRanges[comment.id] = anchor.range }
-            self.composing = nil
-            activeCommentID = comment.id
-            onAnnotationsChanged()
-        } catch {
-            NSSound.beep()
-        }
+        guard insert([comment], named: "Comentário") else { return }
+        self.composing = nil
+        activeCommentID = comment.id
     }
 
     func reply(to id: String, body: String) {
         guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let reply = Comment(docPath: key, parentID: id, anchor: nil, body: body)
-        guard (try? store?.insert(reply)) != nil else { return NSSound.beep() }
-        comments.append(reply)
+        insert([Comment(docPath: key, parentID: id, anchor: nil, body: body)], named: "Resposta")
+    }
+
+    /// New comments, or a comment and its replies brought back by undo, with their identifiers. Undoing deletes the
+    /// first, and the rest with it.
+    @discardableResult
+    private func insert(_ inserted: [Comment], named name: String) -> Bool {
+        guard let first = inserted.first else { return false }
+        do {
+            for comment in inserted { try store?.insert(comment) }
+        } catch {
+            try? store?.deleteComment(first.id)
+            NSSound.beep()
+            return false
+        }
+        comments.append(contentsOf: inserted)
+        for comment in inserted where comment.parentID == nil {
+            if let anchor = comment.anchor.flatMap(resolvedAnchor) { commentRanges[comment.id] = anchor.range }
+        }
+        registerUndo(name) { $0.deleteComment(first.id) }
+        onAnnotationsChanged()
+        return true
     }
 
     func edit(_ id: String, body: String) {
         guard let index = comments.firstIndex(where: { $0.id == id }),
               !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let old = comments[index].body
         try? store?.setBody(body, ofComment: id)
         comments[index].body = body
         comments[index].updatedAt = .now
+        registerUndo("Edição do comentário") { $0.edit(id, body: old) }
     }
 
     func setResolved(_ id: String, _ resolved: Bool) {
+        setResolved(id, at: resolved ? .now : nil)
+    }
+
+    /// Resolved at a date, or open again; undo puts the earlier date back.
+    private func setResolved(_ id: String, at date: Date?) {
         guard let index = comments.firstIndex(where: { $0.id == id }) else { return }
-        let date: Date? = resolved ? .now : nil
+        let old = comments[index].resolvedAt
         try? store?.setResolved(date, ofComment: id)
         comments[index].resolvedAt = date
-        if resolved, activeCommentID == id { activeCommentID = nil }
+        if date != nil, activeCommentID == id { activeCommentID = nil }
+        registerUndo(date != nil ? "Resolver comentário" : "Reabrir comentário") { $0.setResolved(id, at: old) }
         onAnnotationsChanged()
     }
 
     func recolorComment(_ id: String, to color: MarkColor?) {
         guard let index = comments.firstIndex(where: { $0.id == id }) else { return }
+        let old = comments[index].color
         try? store?.setColor(color, ofComment: id)
         comments[index].color = color
+        registerUndo("Cor do comentário") { $0.recolorComment(id, to: old) }
     }
 
+    /// Deletes a comment and its replies; undo brings them all back.
     func deleteComment(_ id: String) {
+        let removed = comments.filter { $0.id == id } + comments.filter { $0.parentID == id }
+        guard !removed.isEmpty else { return }
         try? store?.deleteComment(id)
         comments.removeAll { $0.id == id || $0.parentID == id }
         commentRanges[id] = nil
         if activeCommentID == id { activeCommentID = nil }
+        registerUndo("Excluir comentário") { $0.insert(removed, named: "Comentário") }
         onAnnotationsChanged()
+    }
+
+    // MARK: Undo
+
+    /// Puts the inverse of a change on the window's undo stack, under the change's name. The inverse is itself a
+    /// change, so it registers the redo, which keeps the same name. Undoing brings this document forward first.
+    private func registerUndo(_ name: String, _ inverse: @escaping @MainActor (DocumentModel) -> Void) {
+        guard let manager = undoManager() else { return }
+        manager.registerUndo(withTarget: self) { document in
+            MainActor.assumeIsolated {
+                document.onUndo()
+                inverse(document)
+                document.undoManager()?.setActionName(name)
+            }
+        }
+        manager.setActionName(name)
     }
 
     /// From the inspector: light the comment up and bring its passage into view.

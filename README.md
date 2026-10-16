@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.12.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.13.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.13.0
+
+- **Desfazer e refazer anotações**: **⌘Z** e **⇧⌘Z** desfazem e refazem destaques, mudanças de cor, remoções, comentários, respostas, edições, resolver e reabrir e exclusões, que voltam com as respostas. Desfazer uma mudança feita em outra aba traz essa aba de volta.
 
 ## Novidades da versão 0.12.0
 
@@ -158,6 +162,8 @@ Selecione um trecho para abrir a barra de marcação. Escolha uma cor para desta
 
 Na sidebar de comentários, você pode iniciar uma conversa sobre o documento inteiro, responder a uma conversa existente e alternar entre **Abertos** e **Resolvidos**. Clicar em um comentário vinculado a um trecho leva até sua posição no documento.
 
+**Editar → Desfazer** (**⌘Z**) e **Refazer** (**⇧⌘Z**) valem para tudo isso: destacar, mudar a cor, remover um destaque, comentar, responder, editar, resolver, reabrir e apagar. Um comentário apagado volta com as respostas, e uma resposta da IA salva como anotação também pode ser desfeita. O histórico é da janela, junto com o texto digitado nos campos; desfazer uma mudança de outra aba traz essa aba para a frente. Fechar uma aba apaga o histórico de desfazer dela.
+
 ### PDFs
 
 PDFs abrem no leitor nativo PDFKit. Selecione texto para destacar, comentar ou copiar; clique em um destaque para mudar sua cor ou removê-lo. Clicar em um comentário na sidebar navega até o trecho. As seleções podem atravessar páginas e as anotações continuam disponíveis ao reabrir o arquivo.
@@ -245,6 +251,7 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌘1 … ⌘8 / ⌘9 | Ir para a aba N / para a última aba |
 | ⌥⌘1 … ⌥⌘5 | Um painel / 2, 3 ou 4 colunas / grade 2×2 |
 | ⌃⌘Z | Entrar ou sair do modo zen |
+| ⌘Z / ⇧⌘Z | Desfazer / refazer a última mudança nas anotações |
 | ⇧⌘H | Destacar a seleção com a última cor usada |
 | ⌥⌘M | Comentar a seleção; sem seleção, comentar o documento |
 | ⌥⌘I | Conversar sobre o trecho selecionado com IA |
