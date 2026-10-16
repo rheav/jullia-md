@@ -24,7 +24,7 @@ O esquema SQLite v2 acrescenta a coluna opcional `pdf_anchor` às tabelas de des
 
 ## Impressão
 
-`DocumentPrinter` monta a operação de impressão do documento focado, apresentada como sheet pelo painel nativo. O PDF usa `PDFDocument.printOperation`; os destaques temporários do Jullia nas páginas são impressos. O Markdown é renderizado de novo num `NSTextView` TextKit 1 fora da tela, no tema claro equivalente, com margens próprias e a largura da página dividida por 0,75, ajustada ao papel pela paginação. Destaques, sublinhados e cores de links viram atributos do texto (`DocumentModel.printableText`), porque os atributos temporários do layout só aparecem na tela. Os itens ficam no grupo `.saveItem` do menu File: a cena `Window` não tem grupo de impressão para substituir.
+`DocumentPrinter` monta a operação de impressão do documento focado, apresentada como sheet pelo painel nativo. O PDF usa `PDFDocument.printOperation`; os destaques temporários do Jullia nas páginas são impressos. O Markdown é renderizado de novo num `NSTextView` TextKit 1 fora da tela, no tema claro equivalente, com margens próprias e a largura da página dividida por 0,75, ajustada ao papel pela paginação. Destaques, sublinhados e cores de links viram atributos do texto (`DocumentModel.printableText`), porque os atributos temporários do layout só aparecem na tela. Os itens ficam no grupo `.saveItem` do menu Arquivo: a cena `Window` não tem grupo de impressão para substituir.
 
 ## Anotações e persistência
 

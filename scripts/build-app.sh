@@ -26,6 +26,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key><string>Jullia.md</string>
+  <!-- The interface is in Portuguese: system menus, panels and text menus follow it instead of English. -->
+  <key>CFBundleDevelopmentRegion</key><string>pt-BR</string>
+  <key>CFBundleLocalizations</key><array><string>pt-BR</string></array>
   <key>CFBundleDisplayName</key><string>Jullia.md</string>
   <key>CFBundleIdentifier</key><string>dev.rheav.jullia</string>
   <key>CFBundleExecutable</key><string>Jullia</string>

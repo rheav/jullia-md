@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.11.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.11.1**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.11.1
+
+- Menus e painéis do sistema em português: **Arquivo**, **Editar**, **Visualizar**, **Janela** e **Ajuda**, o menu do app, o menu de contexto do texto e o painel de impressão deixam de aparecer em inglês.
 
 ## Novidades da versão 0.11.0
 
@@ -138,7 +142,7 @@ Também dá para arrastar um arquivo da sidebar até a área de leitura: o desta
 
 ### Modo zen
 
-O botão de visor no fim da barra de abas, o menu **View → Modo zen** ou **⌃⌘Z** deixam na tela só os documentos: somem as sidebars, as barras recolhidas, as abas, o seletor de layout, os cabeçalhos dos painéis, a barra do PDF e os botões da janela. A transparência da janela continua como nos Ajustes e aparece em volta das páginas do PDF. No modo lado a lado, uma linha fina continua separando os painéis e ainda pode ser arrastada. Para sair, use **Esc**, **⌃⌘Z** ou o ✕ discreto no canto superior direito, que acende sob o ponteiro; um aviso lembra disso por dois segundos ao entrar.
+O botão de visor no fim da barra de abas, o menu **Visualizar → Modo zen** ou **⌃⌘Z** deixam na tela só os documentos: somem as sidebars, as barras recolhidas, as abas, o seletor de layout, os cabeçalhos dos painéis, a barra do PDF e os botões da janela. A transparência da janela continua como nos Ajustes e aparece em volta das páginas do PDF. No modo lado a lado, uma linha fina continua separando os painéis e ainda pode ser arrastada. Para sair, use **Esc**, **⌃⌘Z** ou o ✕ discreto no canto superior direito, que acende sob o ponteiro; um aviso lembra disso por dois segundos ao entrar.
 
 Destacar, copiar, zoom e a troca de abas por atalho continuam funcionando. **Comentar** e **Conversar sobre trecho** saem do zen e abrem o painel. Ao sair, tudo volta como estava, inclusive um comentário ou pergunta em edição. O app sempre abre fora do zen.
 
@@ -162,7 +166,7 @@ Após uma alteração externa, o app tenta reencontrar cada trecho pelo texto e 
 
 ### Imprimir
 
-**File → Imprimir…** ou **⌘P** imprime o documento do painel focado pelo painel nativo do macOS, que também salva em PDF pelo menu **PDF**. **Configurar página…** (**⇧⌘P**) escolhe o papel e a orientação.
+**Arquivo → Imprimir…** ou **⌘P** imprime o documento do painel focado pelo painel nativo do macOS, que também salva em PDF pelo menu **PDF**. **Configurar página…** (**⇧⌘P**) escolhe o papel e a orientação.
 
 O Markdown é diagramado de novo para o papel: os temas escuros saem no claro equivalente (Polar como Snow, Ink como Paper), sem o fundo do tema, com margens de 2 cm e o texto em três quartos do tamanho da tela, como num navegador: 16 pt na tela viram 12 pt no papel. As páginas quebram entre linhas. Destaques e sublinhados de comentários abertos são impressos; os cards de comentários não. Um PDF imprime as próprias páginas, reduzidas para caber no papel quando necessário, com os destaques do Jullia.
 
