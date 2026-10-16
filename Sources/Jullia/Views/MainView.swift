@@ -235,6 +235,8 @@ private struct ZenEscapeMonitor: NSViewRepresentable {
                 let handled = MainActor.assumeIsolated { () -> Bool in
                     guard let self, let window = self.window, eventWindow === window,
                           NSApp.modalWindow == nil, window.attachedSheet == nil else { return false }
+                    // A field being typed in, such as a find bar, gets the Esc to close itself.
+                    if let editor = window.firstResponder as? NSTextView, editor.isEditable { return false }
                     self.onEscape()
                     return true
                 }
@@ -300,6 +302,7 @@ struct DocumentReader: View {
                 renderToken: document.renderToken,
                 decorations: document.decorations(theme: theme),
                 scrollRequest: document.scrollRequest,
+                findRequest: document.findRequest,
                 theme: theme,
                 readingWidth: settings.readingWidth
             )

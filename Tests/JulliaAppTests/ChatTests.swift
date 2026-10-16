@@ -340,7 +340,7 @@ final class TestChatGenerator: PassageChatGenerating {
         textView.textStorage?.setAttributedString(document.rendered)
         let coordinator = DocumentTextView.Coordinator()
         coordinator.parent = DocumentTextView(document: document, rendered: document.rendered, renderToken: document.renderToken,
-                                              decorations: [], scrollRequest: nil, theme: .polar, readingWidth: 600)
+                                              decorations: [], scrollRequest: nil, findRequest: nil, theme: .polar, readingWidth: 600)
         coordinator.textView = textView
         textView.coordinator = coordinator
         let range = document.text.range(of: "interessante")

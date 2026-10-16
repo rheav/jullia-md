@@ -26,6 +26,7 @@ struct PDFReader: View {
         } else {
             VStack(spacing: 0) {
                 if !model.zen { toolbar }
+                if document.pdfFind.isVisible { PDFFindBar(find: document.pdfFind, theme: theme) }
                 // In zen the space around the pages is the window's glass, as nothing else is left on screen.
                 DocumentPDFView(document: document, theme: theme, appModel: model, seeThrough: model.zen)
             }
@@ -62,6 +63,50 @@ struct PDFReader: View {
     private func unlock() {
         document.unlockPDF(password: password)
         password = ""
+    }
+}
+
+/// The PDF's find bar: the query, which match is on screen, previous and next. Return goes to the next match, Esc
+/// closes it.
+struct PDFFindBar: View {
+    @Bindable var find: PDFFind
+    let theme: Theme
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+            TextField("Buscar no PDF", text: $find.query)
+                .textFieldStyle(.plain)
+                .foregroundStyle(theme.text.color)
+                .focused($focused)
+                .onSubmit { find.step(1) }
+                .onExitCommand { find.close() }
+            Text(status).monospacedDigit()
+            Button { find.step(-1) } label: { Image(systemName: "chevron.up") }
+                .help("Anterior (⇧⌘G)")
+                .disabled(find.matches.isEmpty)
+            Button { find.step(1) } label: { Image(systemName: "chevron.down") }
+                .help("Seguinte (⌘G)")
+                .disabled(find.matches.isEmpty)
+            Button("OK") { find.close() }
+        }
+        .buttonStyle(.plain)
+        .font(.system(size: 12))
+        .foregroundStyle(theme.secondaryText.color)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(theme.surface.color.opacity(0.9), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+        .onAppear { focused = true }
+        .onChange(of: find.focusToken) { focused = true }
+    }
+
+    private var status: String {
+        guard !find.query.isEmpty else { return "" }
+        guard let current = find.current else { return "Nenhum resultado" }
+        return "\(current + 1) de \(find.matches.count)"
     }
 }
 
@@ -104,6 +149,10 @@ final class AnnotatedPDFView: PDFView {
     private var mouseMonitor: Any?
     private var scrollToken = 0
     private var zoomToken = 0
+    private var findToken = 0
+    private var showsMatches = false
+    /// Selecting a match found: no marking pill, which would sit on the match at the top of the view.
+    private var revealingMatch = false
     private var updating = false
     /// Where the reader was last time this document was on screen, applied once the view has a size.
     private var pendingRestore: PDFPosition?
@@ -202,6 +251,7 @@ final class AnnotatedPDFView: PDFView {
                 hidePill()
             }
         }
+        showFind(model.pdfFind)
         if zoomToken != model.pdfZoomToken {
             zoomToken = model.pdfZoomToken
             fitsPane = false
@@ -211,6 +261,27 @@ final class AnnotatedPDFView: PDFView {
             default: autoScales = true
             }
             hidePill()
+        }
+    }
+
+    /// Every match lit while the find bar is open; the current one selected and scrolled to, after this update so
+    /// the selection reaches the document like one made by hand.
+    private func showFind(_ find: PDFFind) {
+        let reveal = findToken != find.revealToken
+        guard reveal || showsMatches != find.isVisible else { return }
+        findToken = find.revealToken
+        showsMatches = find.isVisible
+        let color = theme.tone(.yellow).fill.alpha(0.55).ns
+        for match in find.matches { match.color = color }
+        highlightedSelections = find.isVisible && !find.matches.isEmpty ? find.matches : nil
+        guard reveal, find.isVisible, let index = find.current, find.matches.indices.contains(index) else { return }
+        let match = find.matches[index]
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.document === match.pages.first?.document else { return }
+            self.revealingMatch = true
+            self.setCurrentSelection(match, animate: true)
+            self.revealingMatch = false
+            self.go(to: match)
         }
     }
 
@@ -231,7 +302,7 @@ final class AnnotatedPDFView: PDFView {
         model?.selectPDF(currentSelection)
         hidePill()
         // Keyboard selections also get the same actions as mouse selections.
-        if NSEvent.pressedMouseButtons == 0 {
+        if NSEvent.pressedMouseButtons == 0, !revealingMatch {
             DispatchQueue.main.async { [weak self] in self?.showSelectionPill() }
         }
     }

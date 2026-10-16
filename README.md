@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.11.1**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.12.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.12.0
+
+- **Buscar no documento**: **⌘F** abre a busca do painel focado, em Markdown e em PDF; **⌘G** e **⇧⌘G** vão ao resultado seguinte e ao anterior, e **⌘E** busca o texto selecionado. Maiúsculas e acentos não importam no PDF, e o termo é compartilhado com a busca dos outros apps.
 
 ## Novidades da versão 0.11.1
 
@@ -164,6 +168,12 @@ PDFs protegidos pedem senha, que não é salva. PDFs sem texto extraível podem 
 
 Após uma alteração externa, o app tenta reencontrar cada trecho pelo texto e pelo contexto das páginas. Se parte da seleção desaparecer, a anotação fica em **Órfãos**. A recuperação é aproximada e depende do texto extraído pelo PDFKit.
 
+### Buscar
+
+**Editar → Buscar → Buscar…** ou **⌘F** busca no documento do painel focado. No Markdown, abre a barra de busca do macOS acima do texto; **Return** ou **⌘G** seleciona o resultado seguinte e **⇧⌘G** o anterior, e o resultado selecionado pode ser destacado, comentado ou copiado como qualquer seleção. No PDF, abre uma barra própria abaixo da barra do PDF: todos os resultados ficam marcados, o atual fica selecionado e a contagem mostra qual é ("3 de 12"); a busca ignora maiúsculas e acentos e começa na página em que você está. **Return** ou **⌘G** vai ao seguinte e **⇧⌘G** ao anterior, voltando ao início depois do último. **Esc** ou **OK** fecham a barra, inclusive no modo zen.
+
+**⌘E** (**Usar seleção para buscar**) busca o trecho selecionado. O termo fica na área de busca compartilhada do macOS: a busca começa com o último termo usado aqui ou em outro app, e **⌘G** funciona mesmo com a barra fechada.
+
 ### Imprimir
 
 **Arquivo → Imprimir…** ou **⌘P** imprime o documento do painel focado pelo painel nativo do macOS, que também salva em PDF pelo menu **PDF**. **Configurar página…** (**⇧⌘P**) escolhe o papel e a orientação.
@@ -226,6 +236,9 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⇧⌘O | Adicionar pasta |
 | ⌘R | Recarregar documento e pastas |
 | ⌘W | Fechar a aba; sem abas, a janela |
+| ⌘F | Buscar no documento do painel focado |
+| ⌘G / ⇧⌘G | Resultado seguinte / anterior |
+| ⌘E | Buscar o texto selecionado |
 | ⌘P | Imprimir o documento do painel focado |
 | ⇧⌘P | Configurar página |
 | ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior |
@@ -242,7 +255,7 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌘0 | Restaurar o texto para 16 pt; em PDF, ajustar à janela |
 | ⌘, | Abrir ajustes |
 | ⌘↩ | Enviar o comentário em edição ou a pergunta no chat |
-| Esc | Cancelar a edição de comentário; no modo zen, sair dele |
+| Esc | Cancelar a edição de comentário; fechar a busca; no modo zen, sair dele |
 
 ## Seus dados
 

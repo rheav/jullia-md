@@ -10,6 +10,7 @@ struct DocumentTextView: NSViewRepresentable {
     let renderToken: Int
     let decorations: [Decoration]
     let scrollRequest: ScrollRequest?
+    let findRequest: FindRequest?
     let theme: Theme
     let readingWidth: Double
 
@@ -29,7 +30,9 @@ struct DocumentTextView: NSViewRepresentable {
         textView.isRichText = true
         textView.drawsBackground = false
         textView.usesFindBar = true
-        textView.isIncrementalSearchingEnabled = true
+        // Not incremental: with it on, Return and ⌘G left the selection where it was (seen with the app in the
+        // background), and highlighting or commenting a match needs the match selected.
+        textView.isIncrementalSearchingEnabled = false
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width]
@@ -39,6 +42,8 @@ struct DocumentTextView: NSViewRepresentable {
         textView.textContainer?.lineFragmentPadding = 0
         textView.delegate = context.coordinator
         context.coordinator.textView = textView
+        // A find command from before this view existed (another tab, another layout) is not carried out again.
+        context.coordinator.findToken = findRequest?.token ?? 0
         textView.coordinator = context.coordinator
 
         scrollView.documentView = textView
@@ -98,6 +103,17 @@ struct DocumentTextView: NSViewRepresentable {
             textView.scrollRangeToVisible(request.range)
             textView.showFindIndicator(for: request.range)
         }
+
+        if let request = findRequest, request.token != coordinator.findToken {
+            coordinator.findToken = request.token
+            // After this update: showing the find bar lays the scroll view out again.
+            DispatchQueue.main.async { [weak textView] in
+                guard let textView else { return }
+                let sender = NSMenuItem()
+                sender.tag = request.action.textFinderAction.rawValue
+                textView.performTextFinderAction(sender)
+            }
+        }
     }
 
     @MainActor
@@ -107,6 +123,7 @@ struct DocumentTextView: NSViewRepresentable {
         var renderToken: Int?
         var decorations: [Decoration]?
         var scrollToken = 0
+        var findToken = 0
         /// Where the text opened; scrolling well away from it keeps a preview tab. Nil until restored.
         private var openedOffset: CGFloat?
         private var scrollObserver: (any NSObjectProtocol)?

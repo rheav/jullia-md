@@ -47,6 +47,8 @@ final class DocumentModel {
     private(set) var pdfZoomToken = 0
     private(set) var pdfZoomDirection = 0
     var hasPDFText: Bool { pdfIndex?.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+    /// The PDF's find bar. Markdown uses the text view's own, through `findRequest`.
+    let pdfFind = PDFFind()
     @ObservationIgnored private var pdfSelectionAnchor: TextAnchor?
 
     private(set) var rendered = NSAttributedString()
@@ -63,6 +65,7 @@ final class DocumentModel {
     var activeCommentID: String?
     var composing: Composing?
     private(set) var scrollRequest: ScrollRequest?
+    private(set) var findRequest: FindRequest?
 
     /// The text view's selection, kept for menu commands. Not observed: it changes on every drag.
     @ObservationIgnored var selection = NSRange(location: 0, length: 0) {
@@ -84,6 +87,7 @@ final class DocumentModel {
     @ObservationIgnored private var options: RenderOptions?
     @ObservationIgnored private var watcher: FileWatcher?
     @ObservationIgnored private var scrollToken = 0
+    @ObservationIgnored private var findToken = 0
 
     var text: NSString { pdfIndex?.text ?? (rendered.string as NSString) }
 
@@ -94,6 +98,7 @@ final class DocumentModel {
         self.chat = PassageChat(generator: chatGenerator ?? ApplePassageChat(), store: store, docPath: self.key)
         highlights = (try? store?.highlights(for: key)) ?? []
         comments = (try? store?.comments(for: key)) ?? []
+        pdfFind.startPage = { [weak self] in (self?.pdfPageNumber ?? 1) - 1 }
         readSource()
     }
 
@@ -144,6 +149,7 @@ final class DocumentModel {
             }
             loadError = nil
             if !pdfLocked { loadPDFText() }
+            pdfFind.attach(pdfDocument)
             return
         }
         do {
@@ -179,6 +185,7 @@ final class DocumentModel {
         pdfLocked = false
         passwordError = nil
         loadPDFText()
+        pdfFind.attach(pdfDocument)
         renderToken += 1
         resolveAnchors()
     }
@@ -281,6 +288,16 @@ final class DocumentModel {
             ], range: range)
         }
         return text
+    }
+
+    /// ⌘F, ⌘G, ⇧⌘G and ⌘E.
+    func find(_ action: FindAction) {
+        if isPDF {
+            pdfFind.perform(action, selectedText: hasSelection ? text.substring(with: selection) : nil)
+        } else {
+            findToken += 1
+            findRequest = FindRequest(action: action, token: findToken)
+        }
     }
 
     func scroll(to range: NSRange, anchor: TextAnchor? = nil) {

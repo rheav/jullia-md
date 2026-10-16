@@ -181,8 +181,8 @@ final class AppModel {
 
     // MARK: Printing
 
-    /// Whether the focused document has something to print: read, and unlocked if it is a protected PDF.
-    var canPrint: Bool {
+    /// Whether the focused document has something to print or search: read, and unlocked if it is a protected PDF.
+    var documentReady: Bool {
         guard let document else { return false }
         return document.loadError == nil && !document.pdfLocked
     }

@@ -30,7 +30,22 @@ struct JulliaCommands: Commands {
                 .keyboardShortcut("p", modifiers: [.command, .shift])
             Button("Imprimir…") { model.printDocument() }
                 .keyboardShortcut("p")
-                .disabled(!model.canPrint)
+                .disabled(!model.documentReady)
+        }
+
+        CommandGroup(after: .pasteboard) {
+            Divider()
+            Menu("Buscar") {
+                Button("Buscar…") { model.document?.find(.show) }
+                    .keyboardShortcut("f")
+                Button("Buscar seguinte") { model.document?.find(.next) }
+                    .keyboardShortcut("g")
+                Button("Buscar anterior") { model.document?.find(.previous) }
+                    .keyboardShortcut("g", modifiers: [.command, .shift])
+                Button("Usar seleção para buscar") { model.document?.find(.useSelection) }
+                    .keyboardShortcut("e")
+            }
+            .disabled(!model.documentReady)
         }
 
         CommandMenu("Abas") {
