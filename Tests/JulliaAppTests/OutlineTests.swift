@@ -39,6 +39,40 @@ import JulliaCore
         return file
     }
 
+    /// A PDF without an outline whose first page prints a table of contents, followed by `pages` pages. Each line is
+    /// drawn at its indent, and a line with a page is linked to it, as an exported book links its contents.
+    static func pdfWithLinkedContents(_ lines: [(text: String, indent: CGFloat, page: Int?)], pages: Int) throws -> URL {
+        let file = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).pdf")
+        let data = NSMutableData()
+        var bounds = CGRect(x: 0, y: 0, width: 600, height: 800)
+        let consumer = try #require(CGDataConsumer(data: data))
+        let context = try #require(CGContext(consumer: consumer, mediaBox: &bounds, nil))
+        func draw(_ text: String, at point: CGPoint) -> CGFloat {
+            let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 14)]))
+            context.textPosition = point
+            CTLineDraw(line, context)
+            return CTLineGetTypographicBounds(line, nil, nil, nil)
+        }
+        context.beginPDFPage(nil)
+        for (row, line) in lines.enumerated() {
+            let origin = CGPoint(x: 40 + line.indent, y: 720 - CGFloat(row) * 24)
+            let width = draw(line.text, at: origin)
+            if let page = line.page {
+                context.setDestination("p\(page)" as CFString, for: CGRect(x: origin.x, y: origin.y - 4, width: width, height: 20))
+            }
+        }
+        context.endPDFPage()
+        for page in 1...pages {
+            context.beginPDFPage(nil)
+            context.addDestination("p\(page)" as CFString, at: CGPoint(x: 0, y: 780))
+            _ = draw("Página \(page).", at: CGPoint(x: 40, y: 700))
+            context.endPDFPage()
+        }
+        context.closePDF()
+        try (data as Data).write(to: file)
+        return file
+    }
+
     @Test func markdownOutlineIsTheHeadingsAndGoesToThemAtTheTop() throws {
         let file = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).md")
         defer { try? FileManager.default.removeItem(at: file) }
@@ -70,6 +104,59 @@ import JulliaCore
         #expect(point?.y == 400)
         document.go(to: section)
         #expect(document.pdfPageRequest?.page == 2)
+    }
+
+    @Test func pdfWithoutAnOutlineReadsItsLinkedContentsWithTheLinesAboveThemAsChapters() throws {
+        let file = try Self.pdfWithLinkedContents([
+            ("Sumário", 200, nil),
+            ("Capítulo 1: Começo", 0, nil),
+            ("Primeira seção", 20, 1),
+            ("Segunda seção", 20, 2),
+            ("Capítulo 2: Fim", 0, nil),
+            ("Terceira seção", 20, 3),
+            ("Quarta seção", 20, 4),
+        ], pages: 4)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let document = DocumentModel(url: file, store: nil)
+        document.apply(RenderOptions(theme: .polar))
+        #expect(document.outline.map(\.title) == [
+            "Capítulo 1: Começo", "Primeira seção", "Segunda seção", "Capítulo 2: Fim", "Terceira seção", "Quarta seção",
+        ])
+        #expect(document.outline.map(\.level) == [1, 2, 2, 1, 2, 2])
+        let chapter = try #require(document.outline.first { $0.title == "Capítulo 2: Fim" })
+        document.go(to: chapter)
+        #expect(document.pdfPageRequest?.page == 3)
+        document.go(to: try #require(document.outline.last))
+        #expect(document.pdfPageRequest?.page == 4)
+    }
+
+    @Test func linkedContentsTakeTheirLevelsFromTheIndentAndLeaveOutLeadersAndPageNumbers() throws {
+        let file = try Self.pdfWithLinkedContents([
+            ("Índice", 0, nil),
+            ("Introdução .......... 2", 0, 1),
+            ("Parte um .......... 3", 0, 2),
+            ("Uma seção .......... 3", 20, 2),
+            ("Parte dois, com um título", 0, 3),
+            ("que continua .......... 4", 0, 3),
+        ], pages: 3)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let document = DocumentModel(url: file, store: nil)
+        document.apply(RenderOptions(theme: .polar))
+        #expect(document.outline.map(\.title) == ["Introdução", "Parte um", "Uma seção", "Parte dois, com um título que continua"])
+        #expect(document.outline.map(\.level) == [1, 1, 2, 1])
+    }
+
+    @Test func linksThatDoNotRunInOrderAreNotContents() throws {
+        let file = try Self.pdfWithLinkedContents([
+            ("Como mostra a terceira página,", 0, 3),
+            ("depois de voltar à primeira,", 0, 1),
+            ("e da quarta, que vem antes", 0, 4),
+            ("da segunda.", 0, 2),
+        ], pages: 4)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let document = DocumentModel(url: file, store: nil)
+        document.apply(RenderOptions(theme: .polar))
+        #expect(document.outline.isEmpty)
     }
 
     @Test func goingToAPageStaysWithinTheDocument() throws {

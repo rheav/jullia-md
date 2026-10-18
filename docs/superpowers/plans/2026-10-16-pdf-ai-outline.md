@@ -57,6 +57,8 @@ Decisão ao fim: se a heurística já basta para a maioria dos casos, a Fase 2 v
 
 ## Fase 4 — Sumário impresso (0.18.0)
 
+Sumários impressos feitos de links já viram índice desde a 0.15.0 (`PDFLinkedContents`): os links dão a página, sem conversão. Esta fase cuida dos sumários sem links.
+
 1. Detectar páginas de sumário no início do documento: muitas linhas terminando em número, com pontilhado ou espaço antes dele.
 2. Extrair título, nível (pelo recuo) e página impressa.
 3. Converter a página impressa na página do PDF: pelos rótulos (`PDFPage.label`) quando existem; senão, pelo deslocamento obtido ao encontrar dois ou três títulos nas páginas indicadas.

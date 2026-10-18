@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.14.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.15.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.15.0
+
+- **Sumário de PDFs sem índice**: quando o PDF não traz índice próprio, mas imprime um sumário com links para as páginas, como muitos livros exportados, a aba **Sumário** monta o índice com esses links. As linhas sem link logo acima de cada grupo, como "Capítulo 1", viram os títulos dos grupos.
 
 ## Novidades da versão 0.14.0
 
@@ -181,7 +185,7 @@ Após uma alteração externa, o app tenta reencontrar cada trecho pelo texto e 
 
 ### Sumário e páginas
 
-A aba **Sumário** do painel direito, também em **Visualizar → Mostrar sumário** ou no ícone de lista da barra recolhida, mostra os títulos do Markdown recuados pelo nível. Um clique leva o título ao alto da tela. Em PDFs, **Índice** mostra o índice gravado no próprio arquivo, quando ele tem um, e **Páginas** mostra as miniaturas em duas colunas: a página atual fica destacada e acompanha a leitura, e um clique vai à página. Um PDF sem índice abre direto nas páginas.
+A aba **Sumário** do painel direito, também em **Visualizar → Mostrar sumário** ou no ícone de lista da barra recolhida, mostra os títulos do Markdown recuados pelo nível. Um clique leva o título ao alto da tela. Em PDFs, **Índice** mostra o índice gravado no próprio arquivo, quando ele tem um. Sem ele, mostra o sumário impresso no PDF, se for feito de links para as páginas: cada link vira um item, uma linha sem link logo acima de um grupo de links, como "Capítulo 1", vira o título do grupo, e itens mais recuados ficam um nível abaixo. **Páginas** mostra as miniaturas em duas colunas: a página atual fica destacada e acompanha a leitura, e um clique vai à página. Um PDF sem índice abre direto nas páginas.
 
 **Visualizar → Ir para a página…** (**⌥⌘G**), ou um clique em "Página X de Y" na barra do PDF, pede o número da página.
 

@@ -36,7 +36,8 @@ struct PDFPageRequest: Equatable {
     var token: Int
 }
 
-/// One entry of the table of contents: a Markdown heading, or an item of the PDF's own outline.
+/// One entry of the table of contents: a Markdown heading, or an item of the PDF's own outline or, without one, of
+/// the contents it prints as links.
 struct OutlineItem: Identifiable, Equatable {
     enum Target: Equatable {
         case text(NSRange)
@@ -214,6 +215,7 @@ final class DocumentModel {
         }
         pdfIndex = PDFTextIndex(document: pdfDocument)
         outline = Self.outline(of: pdfDocument)
+        if outline.isEmpty { outline = PDFLinkedContents.outline(of: pdfDocument) }
     }
 
     /// The PDF's own outline, depth first, each item with its depth and destination. Items without one are kept as
