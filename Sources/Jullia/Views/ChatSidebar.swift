@@ -9,21 +9,59 @@ struct InspectorSidebar: View {
     var body: some View {
         @Bindable var model = model
         VStack(spacing: 0) {
-            Picker("Painel lateral", selection: $model.inspectorTab) {
-                ForEach(AppModel.InspectorTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
+            InspectorTabs(selection: $model.inspectorTab, theme: theme)
+                .padding(.horizontal, InspectorTabs.inset)
+                .padding(.top, InspectorTabs.inset)
             switch model.inspectorTab {
             case .comments: CommentsSidebar(document: document, theme: theme)
             case .chat: ChatSidebar(document: document, theme: theme).id(document.key)
             case .outline: OutlineSidebar(document: document, theme: theme).id(document.key)
             }
         }
+    }
+}
+
+/// Comments, chat and outline, at the top of the right panel. Drawn here rather than as a system segmented control so
+/// its corners follow the panel's: set in by `inset`, it curves with the panel's corner, and the selection with it.
+private struct InspectorTabs: View {
+    @Binding var selection: AppModel.InspectorTab
+    let theme: Theme
+    @Namespace private var namespace
+
+    static let inset: CGFloat = 10
+    private static let padding: CGFloat = 2
+
+    var body: some View {
+        let radius = PanelMetrics.concentricRadius(inset: Self.inset)
+        HStack(spacing: 0) {
+            ForEach(AppModel.InspectorTab.allCases, id: \.self) { tab in
+                let selected = tab == selection
+                Button {
+                    withAnimation(.smooth(duration: 0.2)) { selection = tab }
+                } label: {
+                    Text(tab.rawValue)
+                        .font(.system(size: 12.5, weight: selected ? .semibold : .regular))
+                        .foregroundStyle(selected ? theme.background.color : theme.text.color)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 22)
+                        .background {
+                            if selected {
+                                RoundedRectangle(cornerRadius: radius - Self.padding, style: .continuous)
+                                    .fill(theme.accent.color)
+                                    .matchedGeometryEffect(id: "selection", in: namespace)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(Self.padding)
+        .background(theme.text.color.opacity(0.06), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Painel lateral")
     }
 }
 

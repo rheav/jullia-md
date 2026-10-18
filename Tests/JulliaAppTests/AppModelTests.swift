@@ -55,6 +55,12 @@ import Testing
         #expect(document.highlightRanges[id] == moved)
     }
 
+    @Test func rightPanelWidthFollowsTheWindowWithinItsBounds() {
+        #expect(Layout.inspectorWidth(window: 1600) == 360, "A roomy window gets the chat's width")
+        #expect(abs(Layout.inspectorWidth(window: 1200) - 336) < 0.001)
+        #expect(Layout.inspectorWidth(window: 800) == 312, "Never narrower than the comments header fits")
+    }
+
     @Test func foldedCommentsPanelOnlyOpensForWritingOrChat() throws {
         let suite = "dev.rheav.jullia.tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))

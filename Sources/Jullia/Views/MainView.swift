@@ -7,9 +7,15 @@ enum Layout {
     static let topBar: CGFloat = 50
     static let filesWidth: CGFloat = 264
     static let filesRail: CGFloat = 52
-    static let commentsWidth: CGFloat = 312
-    static let chatWidth: CGFloat = 360
     static let commentsRail: CGFloat = 44
+    /// The right panel's width, the same for comments, chat and outline: the chat's, the widest, in a roomy window,
+    /// and no narrower than the comments header fits on one line.
+    static let inspectorWidths: ClosedRange<CGFloat> = 312...360
+
+    /// A share of the window within `inspectorWidths`, so a smaller window or screen gives the document the room.
+    static func inspectorWidth(window: CGFloat) -> CGFloat {
+        min(max(window * 0.28, inspectorWidths.lowerBound), inspectorWidths.upperBound)
+    }
 }
 
 struct MainView: View {
@@ -17,6 +23,7 @@ struct MainView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.undoManager) private var undoManager
+    @State private var windowWidth: CGFloat?
 
     private struct RenderKey: Equatable {
         var theme: ThemeID
@@ -54,7 +61,7 @@ struct MainView: View {
                             .frame(width: Layout.commentsRail)
                     } else {
                         InspectorSidebar(document: document, theme: theme)
-                            .frame(width: model.inspectorTab == .chat ? Layout.chatWidth : Layout.commentsWidth)
+                            .frame(width: windowWidth.map(Layout.inspectorWidth) ?? Layout.inspectorWidths.upperBound)
                     }
                 }
                 .glassPanel(settings.commentsGlass, theme: theme)
@@ -95,6 +102,7 @@ struct MainView: View {
         .ignoresSafeArea()
         .tint(theme.accent.color)
         .frame(minWidth: 760, minHeight: 480)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { windowWidth = $0 }
         .onAppear {
             applyAppearance(theme)
             model.undoManager = undoManager

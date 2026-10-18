@@ -70,6 +70,10 @@ struct PanelCutout: Shape {
 enum PanelMetrics {
     static let cornerRadius: CGFloat = 18
     static let gap: CGFloat = 8
+
+    /// The corner radius of something set `inset` points in from a panel's corner: the panel's less the inset, so
+    /// both corners curve together and the gap between them stays even.
+    static func concentricRadius(inset: CGFloat) -> CGFloat { max(cornerRadius - inset, 4) }
 }
 
 extension View {

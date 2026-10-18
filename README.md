@@ -6,9 +6,14 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.16.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.16.1**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.16.1
+
+- O painel da direita tem a mesma largura em **Comentários**, **Chat com IA** e **Sumário**: a do chat numa janela larga, um pouco menos em janelas e telas menores.
+- O seletor no alto do painel acompanha a curva do canto do painel.
 
 ## Novidades da versão 0.16.0
 

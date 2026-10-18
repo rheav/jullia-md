@@ -385,7 +385,7 @@ final class TestChatGenerator: PassageChatGenerating {
             for (name, tab, history) in [("chat", AppModel.InspectorTab.chat, false), ("history", .chat, true), ("comments", .comments, false)] {
                 if history { document.chat.clear() } else { document.chat.openConversation(conversationID) }
                 app.inspectorTab = tab
-                let size = CGSize(width: tab == .chat ? Layout.chatWidth : Layout.commentsWidth, height: 800)
+                let size = CGSize(width: Layout.inspectorWidths.upperBound, height: 800)
                 let window = NSWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
                 window.isReleasedWhenClosed = false
                 window.appearance = NSAppearance(named: theme.isDark ? .darkAqua : .aqua)
