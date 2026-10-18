@@ -90,6 +90,34 @@ import Testing
         #expect(model.document == nil)
     }
 
+    @Test func draggingATabMovesItAndTheSessionKeepsTheOrder() throws {
+        let (folder, files) = try makeFiles(["a.md", "b.md", "c.md"])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (model, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let workspace = model.workspace
+        for file in files { model.openFile(file, as: .permanent) }
+        workspace.selectTab(at: 1)
+        workspace.move(try #require(workspace.tabs.last), to: 0)
+        #expect(workspace.tabs.map(\.name) == ["c.md", "a.md", "b.md"])
+        #expect(model.document?.url == files[1], "The pane keeps showing its tab")
+        workspace.move(try #require(workspace.tabs.first), to: 9)
+        #expect(workspace.tabs.map(\.name) == ["a.md", "b.md", "c.md"], "Past the end is the last slot")
+        workspace.move(try #require(workspace.tabs.first), to: 1)
+        model.prepareToQuit()
+
+        let (reopened, _) = try makeModel(suite)
+        #expect(reopened.workspace.tabs.map(\.name) == ["b.md", "a.md", "c.md"])
+        #expect(reopened.document?.url.lastPathComponent == "b.md")
+
+        // Past half of the next tab, it swaps; back past the first slot, it stays there.
+        #expect(TabBar.slot(from: 1, moved: 40, stride: 100, count: 4) == 1)
+        #expect(TabBar.slot(from: 1, moved: 60, stride: 100, count: 4) == 2)
+        #expect(TabBar.slot(from: 1, moved: 260, stride: 100, count: 4) == 3)
+        #expect(TabBar.slot(from: 1, moved: -500, stride: 100, count: 4) == 0)
+    }
+
     @Test func sessionRestoresTabsLazilyAndMigratesTheLastFile() throws {
         let (folder, files) = try makeFiles(["a.md", "b.md", "c.md"])
         defer { try? FileManager.default.removeItem(at: folder) }

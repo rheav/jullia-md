@@ -3,10 +3,19 @@ import JulliaCore
 import SwiftUI
 
 /// The open files along the top strip. Tabs share the width up to a comfortable size and scroll past a minimum, so
-/// the strip's empty end still drags the window.
+/// the strip's empty end still drags the window. A tab dragged along the strip changes places with the tabs it passes.
 struct TabBar: View {
     let theme: Theme
     @Environment(AppModel.self) private var model
+    @State private var drag: Drag?
+    @State private var overTabs = false
+
+    /// The tab being dragged: the slot it started in, and how far the pointer has taken it from the slot it is in now.
+    private struct Drag {
+        let tab: DocumentTab.ID
+        let start: Int
+        var offset: CGFloat
+    }
 
     private static let widest: CGFloat = 220
     private static let narrowest: CGFloat = 110
@@ -26,14 +35,22 @@ struct TabBar: View {
                     ScrollView(.horizontal) {
                         HStack(spacing: Self.spacing) {
                             ForEach(workspace.tabs) { tab in
+                                let dragged = drag?.tab == tab.id
                                 TabChip(tab: tab, theme: theme)
                                     .frame(width: width)
+                                    .offset(x: dragged ? drag?.offset ?? 0 : 0)
+                                    .zIndex(dragged ? 1 : 0)
+                                    // The dragged tab stays under the pointer while the others slide.
+                                    .transaction { if dragged { $0.animation = nil } }
+                                    .gesture(reorder(tab, stride: width + Self.spacing))
                                     .id(tab.id)
                             }
                         }
                     }
                     .scrollIndicators(.never)
                     .frame(width: min(total, available))
+                    .onHover { overTabs = $0 }
+                    .background(WindowMoveLock(locked: overTabs || drag != nil))
                     .onChange(of: workspace.focusedTab?.id) { _, id in
                         guard let id else { return }
                         withAnimation(.smooth(duration: 0.2)) { scroller.scrollTo(id) }
@@ -55,6 +72,51 @@ struct TabBar: View {
             .frame(maxHeight: .infinity)
         }
     }
+
+    /// Moves the tab to the slot the pointer has taken it to, past half of each tab on the way.
+    private func reorder(_ tab: DocumentTab, stride: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 4, coordinateSpace: .global)
+            .onChanged { value in
+                let workspace = model.workspace
+                let current = workspace.tabs.firstIndex { $0.id == tab.id } ?? 0
+                let start = drag.flatMap { $0.tab == tab.id ? $0.start : nil } ?? current
+                let slot = Self.slot(from: start, moved: value.translation.width, stride: stride, count: workspace.tabs.count)
+                if slot != current {
+                    withAnimation(.smooth(duration: 0.18)) { workspace.move(tab, to: slot) }
+                }
+                drag = Drag(tab: tab.id, start: start, offset: value.translation.width - CGFloat(slot - start) * stride)
+            }
+            .onEnded { _ in
+                withAnimation(.smooth(duration: 0.18)) { drag = nil }
+            }
+    }
+
+    /// The slot a tab dragged `moved` points from `start` lands in, tabs being `stride` apart.
+    static func slot(from start: Int, moved: CGFloat, stride: CGFloat, count: Int) -> Int {
+        guard stride > 0, count > 0 else { return start }
+        return min(max(start + Int((moved / stride).rounded()), 0), count - 1)
+    }
+}
+
+/// Holds the window still while the pointer is over the tabs. The strip sits in the title bar, where the window
+/// server would move the whole window with a tab being dragged; anywhere else on the strip still moves it.
+private struct WindowMoveLock: NSViewRepresentable {
+    let locked: Bool
+
+    final class Lock: NSView {
+        var locked = false {
+            didSet { window?.isMovable = !locked }
+        }
+
+        override func viewWillMove(toWindow newWindow: NSWindow?) {
+            window?.isMovable = true
+            newWindow?.isMovable = !locked
+        }
+    }
+
+    func makeNSView(context: Context) -> Lock { Lock() }
+
+    func updateNSView(_ view: Lock, context: Context) { view.locked = locked }
 }
 
 /// One tab: icon, name (italic while it is a preview), the pane it shows in when the window is split, and ✕.

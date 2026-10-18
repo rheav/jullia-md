@@ -6,9 +6,13 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.15.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.16.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.16.0
+
+- **Reordenar abas arrastando**: arraste uma aba para a esquerda ou para a direita na barra; ela troca de lugar com as que passa, e a ordem volta ao reabrir o app. Arrastar uma aba não move a janela; o trecho vazio da barra continua movendo.
 
 ## Novidades da versão 0.15.0
 
@@ -147,7 +151,7 @@ A sidebar mostra uma pasta por vez. Ao abrir um documento, ela vai para a pasta 
 
 Um clique num arquivo da sidebar o abre na **aba de prévia**, com o nome em itálico: o próximo arquivo clicado toma o lugar dela, então dá para folhear uma pasta sem acumular abas. A prévia vira uma aba fixa com um duplo clique (no arquivo ou na aba), ao destacar ou comentar, ao mudar de página no PDF ou ao rolar o Markdown. **Abrir em nova aba**, no menu do arquivo, e os arquivos abertos por **⌘O**, pelo Finder ou arrastados já abrem fixos. Um arquivo já aberto não é aberto de novo: o app vai para a aba dele.
 
-Cada aba guarda onde a leitura estava: página, posição e zoom no PDF, rolagem no Markdown. O menu da aba fecha as outras ou as da direita. As abas e a aba ativa são restauradas ao reabrir o app, se **Reabrir as pastas e as abas ao iniciar** estiver ligado em Ajustes → Geral; os documentos das abas que não estão na tela só são lidos quando você volta a elas.
+Cada aba guarda onde a leitura estava: página, posição e zoom no PDF, rolagem no Markdown. Arraste uma aba pela barra para mudar a ordem; sobre as abas, a janela fica parada, e o trecho vazio da barra continua movendo a janela. O menu da aba fecha as outras ou as da direita. As abas e a aba ativa são restauradas ao reabrir o app, se **Reabrir as pastas e as abas ao iniciar** estiver ligado em Ajustes → Geral; os documentos das abas que não estão na tela só são lidos quando você volta a elas.
 
 ### Lado a lado
 

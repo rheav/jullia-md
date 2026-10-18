@@ -214,6 +214,15 @@ final class Workspace {
         select(tabs[(current + offset + tabs.count) % tabs.count])
     }
 
+    /// Puts a tab at another place in the bar, as when it is dragged there. Panes keep showing the same tabs.
+    func move(_ tab: DocumentTab, to index: Int) {
+        guard let from = tabs.firstIndex(where: { $0.id == tab.id }) else { return }
+        let to = min(max(index, 0), tabs.count - 1)
+        guard from != to else { return }
+        tabs.insert(tabs.remove(at: from), at: to)
+        onChange()
+    }
+
     // MARK: Closing
 
     /// Closes a tab. A pane that showed it takes the nearest tab not shown elsewhere; in a split, a pane left empty
