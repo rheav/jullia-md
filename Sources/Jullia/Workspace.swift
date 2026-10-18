@@ -10,6 +10,9 @@ final class DocumentTab: Identifiable {
     /// A preview tab (italic) is replaced by the next file opened from the sidebar, until it is kept.
     var isPreview: Bool
     var document: DocumentModel?
+    /// The pane this tab belongs to, by position: clicking it shows it there. With fewer panes than that, it belongs
+    /// to the last one, and goes back to its own when the window is divided again.
+    var home = 0
 
     init(url: URL, isPreview: Bool) {
         self.url = url
@@ -89,6 +92,8 @@ struct Session: Codable, Equatable {
     struct SavedTab: Codable, Equatable {
         var path: String
         var preview: Bool
+        /// The pane the tab belongs to; sessions from before panes had their own tabs leave it out.
+        var pane: Int?
     }
 
     var tabs: [SavedTab]
@@ -101,7 +106,8 @@ struct Session: Codable, Equatable {
 }
 
 /// The tabs and the panes showing them. A file is open in at most one tab, and a tab shows in at most one pane, so
-/// two views never edit the same annotations from different models.
+/// two views never edit the same annotations from different models. Each tab belongs to a pane, which shows one of
+/// its own tabs; the bar keeps each pane's tabs together, in pane order.
 @MainActor @Observable
 final class Workspace {
     private(set) var tabs: [DocumentTab] = []
@@ -139,6 +145,11 @@ final class Workspace {
         paneIndex(of: tab) != nil
     }
 
+    /// The pane a tab belongs to now: its own, or the last one while there are fewer panes.
+    func group(of tab: DocumentTab) -> Int {
+        min(tab.home, panes.count - 1)
+    }
+
     // MARK: Opening and selecting
 
     /// Opens `url` in a tab, reusing the one that already has it, and shows it.
@@ -151,16 +162,22 @@ final class Workspace {
             return existing
         }
         let tab = DocumentTab(url: url, isPreview: kind == .preview)
+        tab.home = focusedPane
         if kind == .preview, let index = tabs.firstIndex(where: \.isPreview) {
             let old = tabs[index]
             if let pane = paneIndex(of: old), pane != focusedPane {
                 // Showing in another pane: keep it there rather than swap the file under the reader.
                 old.isPreview = false
                 insert(tab)
-            } else {
+            } else if group(of: old) == focusedPane {
                 tabs[index] = tab
                 for pane in panes.indices where panes[pane].tabID == old.id { panes[pane].tabID = tab.id }
                 unload(old)
+            } else {
+                // Another pane's preview, not on screen: it goes, and the new one joins the focused pane's tabs.
+                tabs.remove(at: index)
+                unload(old)
+                insert(tab)
             }
         } else {
             insert(tab)
@@ -169,21 +186,29 @@ final class Workspace {
         return tab
     }
 
-    /// Right after the focused pane's tab.
+    /// Among its pane's tabs: right after the focused tab when that is one of them, otherwise after the last.
     private func insert(_ tab: DocumentTab) {
-        let after = focusedTab.flatMap { focused in tabs.firstIndex { $0.id == focused.id } }
-        tabs.insert(tab, at: after.map { $0 + 1 } ?? tabs.endIndex)
+        let group = group(of: tab)
+        let after = focusedTab.flatMap { focused in
+            self.group(of: focused) == group ? tabs.firstIndex { $0.id == focused.id } : nil
+        } ?? tabs.lastIndex { self.group(of: $0) <= group }
+        tabs.insert(tab, at: after.map { $0 + 1 } ?? 0)
     }
 
-    /// A tab already in a pane focuses that pane; otherwise it moves into the focused pane.
+    /// A tab already in a pane focuses that pane; otherwise it shows in the pane it belongs to.
     func select(_ tab: DocumentTab) {
-        if let pane = paneIndex(of: tab) { focus(pane) } else { show(tab, in: focusedPane) }
+        if let pane = paneIndex(of: tab) { focus(pane) } else { show(tab, in: group(of: tab)) }
     }
 
+    /// Shows a tab in a pane, which it belongs to from then on. A tab already in another pane focuses that pane.
     func show(_ tab: DocumentTab, in pane: Int) {
         guard panes.indices.contains(pane) else { return }
         if let other = paneIndex(of: tab), other != pane { return focus(other) }
         panes[pane].tabID = tab.id
+        if group(of: tab) != pane {
+            tab.home = pane
+            regroup()
+        }
         if tab.document == nil { load(tab) }
         focusedPane = pane
         onChange()
@@ -207,33 +232,74 @@ final class Workspace {
         select(tabs[index])
     }
 
-    /// The tab after (or before) the focused one, wrapping around.
+    /// The tab after (or before) the focused one among the focused pane's tabs, wrapping around.
     func selectAdjacentTab(_ offset: Int) {
-        guard !tabs.isEmpty else { return }
-        let current = focusedTab.flatMap { focused in tabs.firstIndex { $0.id == focused.id } } ?? 0
-        select(tabs[(current + offset + tabs.count) % tabs.count])
+        let own = tabs.filter { group(of: $0) == focusedPane }
+        guard !own.isEmpty else { return }
+        let current = focusedTab.flatMap { focused in own.firstIndex { $0.id == focused.id } } ?? 0
+        select(own[(current + offset + own.count) % own.count])
     }
 
-    /// Puts a tab at another place in the bar, as when it is dragged there. Panes keep showing the same tabs.
+    /// Puts a tab at another place in the bar, as when it is dragged there. Among another pane's tabs it belongs to
+    /// that pane; where two panes' tabs meet, it stays with its own. The panes change only with `settle`, when the
+    /// drag ends, so they do not flicker while the tab passes.
     func move(_ tab: DocumentTab, to index: Int) {
         guard let from = tabs.firstIndex(where: { $0.id == tab.id }) else { return }
         let to = min(max(index, 0), tabs.count - 1)
-        guard from != to else { return }
-        tabs.insert(tabs.remove(at: from), at: to)
+        if from != to { tabs.insert(tabs.remove(at: from), at: to) }
+        let lower = to > 0 ? group(of: tabs[to - 1]) : 0
+        let upper = to < tabs.count - 1 ? group(of: tabs[to + 1]) : panes.count - 1
+        let group = min(max(group(of: tab), lower), upper)
+        guard from != to || group != self.group(of: tab) else { return }
+        if group != self.group(of: tab) { tab.home = group }
         onChange()
+    }
+
+    /// Moves a tab to the end of another pane's tabs and shows it there.
+    func move(_ tab: DocumentTab, toPane pane: Int) {
+        guard panes.indices.contains(pane), paneIndex(of: tab) != pane else { return }
+        tabs.removeAll { $0.id == tab.id }
+        tab.home = pane
+        tabs.insert(tab, at: (tabs.lastIndex { group(of: $0) <= pane } ?? -1) + 1)
+        settle(tab)
+    }
+
+    /// After a tab changed panes: the pane showing it shows another of its own tabs, or closes when it has none
+    /// left, and the tab shows in its new pane.
+    func settle(_ tab: DocumentTab) {
+        if let from = paneIndex(of: tab), from != group(of: tab) {
+            if let next = tabs.first(where: { group(of: $0) == from && !isVisible($0) }) {
+                panes[from].tabID = next.id
+                if next.document == nil { load(next) }
+            } else {
+                panes[from].tabID = nil
+                if panes.count > 1 { removePane(from) }
+            }
+        }
+        show(tab, in: group(of: tab))
+    }
+
+    /// Keeps each pane's tabs together in the bar, in pane order, and otherwise in their order.
+    private func regroup() {
+        let grouped = tabs.enumerated()
+            .sorted { (group(of: $0.element), $0.offset) < (group(of: $1.element), $1.offset) }
+            .map(\.element)
+        if grouped.map(\.id) != tabs.map(\.id) { tabs = grouped }
     }
 
     // MARK: Closing
 
-    /// Closes a tab. A pane that showed it takes the nearest tab not shown elsewhere; in a split, a pane left empty
+    /// Closes a tab. A pane that showed it takes the nearest of its other tabs; in a split, a pane left with none
     /// closes.
     func close(_ tab: DocumentTab) {
         guard let index = tabs.firstIndex(where: { $0.id == tab.id }) else { return }
+        let group = group(of: tab)
         tabs.remove(at: index)
         unload(tab)
         var emptied: Pane.ID?
         for pane in panes.indices where panes[pane].tabID == tab.id {
-            let replacement = tabs[index...].first { !isVisible($0) } ?? tabs[..<index].last { !isVisible($0) }
+            let own = { (other: DocumentTab) in self.group(of: other) == group && !self.isVisible(other) }
+            let replacement = tabs[index...].first(where: own) ?? tabs[..<index].last(where: own)
             panes[pane].tabID = replacement?.id
             if let replacement, replacement.document == nil { load(replacement) }
             if replacement == nil { emptied = panes[pane].id }
@@ -256,8 +322,8 @@ final class Workspace {
 
     // MARK: Panes
 
-    /// Divides the reading area. New panes take the next tabs not shown; panes past the new count close, their tabs
-    /// stay in the bar.
+    /// Divides the reading area. A new pane gets back the tabs that belonged to it before, or else takes the next
+    /// tab not shown; panes past the new count close, and their tabs join the last pane.
     func setLayout(_ layout: PaneLayout) {
         let count = layout.slotCount
         if panes.count > count {
@@ -265,14 +331,17 @@ final class Workspace {
             focusedPane = min(focusedPane, count - 1)
         }
         while panes.count < count {
-            var pane = Pane()
-            if let next = nextHiddenTab() {
-                pane.tabID = next.id
+            let index = panes.count
+            panes.append(Pane())
+            let returning = tabs.first { $0.home == index && !isVisible($0) }
+            if let next = returning ?? nextHiddenTab() {
+                next.home = index
+                panes[index].tabID = next.id
                 if next.document == nil { load(next) }
             }
-            panes.append(pane)
         }
         self.layout = layout
+        regroup()
         onChange()
     }
 
@@ -280,16 +349,24 @@ final class Workspace {
     private func placeBeside(_ tab: DocumentTab) {
         if panes[focusedPane].tabID == nil { return show(tab, in: focusedPane) }
         if panes.count < Self.maxPanes {
-            var pane = Pane()
-            pane.tabID = tab.id
-            panes.insert(pane, at: focusedPane + 1)
-            layout = .columns(panes.count)
-            focusedPane += 1
-            if tab.document == nil { load(tab) }
-            onChange()
+            insertPane(at: focusedPane + 1, showing: tab)
         } else {
             show(tab, in: (focusedPane + 1) % panes.count)
         }
+    }
+
+    /// A new pane at `index`, showing a tab that belongs to it; the tabs of the panes after it move along with them.
+    private func insertPane(at index: Int, showing tab: DocumentTab) {
+        for other in tabs where other.home >= index { other.home += 1 }
+        var pane = Pane()
+        pane.tabID = tab.id
+        panes.insert(pane, at: index)
+        layout = .columns(panes.count)
+        focusedPane = index
+        tab.home = index
+        regroup()
+        if tab.document == nil { load(tab) }
+        onChange()
     }
 
     /// Whether a drop on a pane's side can open a new pane there: columns, with room for one more.
@@ -304,22 +381,16 @@ final class Workspace {
             tab = existing
         } else {
             tab = DocumentTab(url: url, isPreview: false)
+            tab.home = pane
             insert(tab)
         }
         tab.isPreview = false
         if let shown = paneIndex(of: tab) { return show(tab, in: shown) }
         guard side != .center, canAddPane, panes[pane].tabID != nil else { return show(tab, in: pane) }
-        var added = Pane()
-        added.tabID = tab.id
-        let index = side == .leading ? pane : pane + 1
-        panes.insert(added, at: index)
-        layout = .columns(panes.count)
-        focusedPane = index
-        if tab.document == nil { load(tab) }
-        onChange()
+        insertPane(at: side == .leading ? pane : pane + 1, showing: tab)
     }
 
-    /// Closes a pane; its tab stays in the bar.
+    /// Closes a pane; its tabs stay in the bar, with the pane to its left (or, for the first, to its right).
     func closePane(_ pane: Int) {
         guard panes.count > 1, panes.indices.contains(pane) else { return }
         removePane(pane)
@@ -328,6 +399,8 @@ final class Workspace {
 
     private func removePane(_ pane: Int) {
         panes.remove(at: pane)
+        for tab in tabs where tab.home > pane || (tab.home == pane && pane > 0) { tab.home -= 1 }
+        regroup()
         layout = layout == .grid && panes.count == 4 ? .grid : .columns(panes.count)
         if focusedPane > pane || focusedPane >= panes.count { focusedPane = max(0, focusedPane - 1) }
     }
@@ -348,7 +421,7 @@ final class Workspace {
 
     var session: Session {
         Session(
-            tabs: tabs.map { Session.SavedTab(path: $0.url.path, preview: $0.isPreview) },
+            tabs: tabs.map { Session.SavedTab(path: $0.url.path, preview: $0.isPreview, pane: $0.home) },
             panes: panes.map { pane in tabs.firstIndex { $0.id == pane.tabID } },
             focused: focusedPane,
             layout: layout,
@@ -362,6 +435,7 @@ final class Workspace {
         tabs = []
         for (index, saved) in session.tabs.enumerated() where fileExists(saved.path) {
             let tab = DocumentTab(url: URL(fileURLWithPath: saved.path), isPreview: saved.preview)
+            tab.home = max(saved.pane ?? 0, 0)
             restored[index] = tab
             tabs.append(tab)
         }
@@ -378,6 +452,11 @@ final class Workspace {
             PaneLayout(rawValue: key).map { ($0, value) }
         })
         focusedPane = min(max(session.focused, 0), panes.count - 1)
+        // Before panes had their own tabs, a tab belonged to the pane showing it.
+        for (index, pane) in panes.enumerated() {
+            if let tab = tab(pane.tabID), session.tabs.allSatisfy({ $0.pane == nil }) { tab.home = index }
+        }
+        regroup()
         for pane in panes {
             if let tab = tab(pane.tabID), tab.document == nil { load(tab) }
         }

@@ -6,9 +6,14 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.16.1**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.17.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.17.0
+
+- **Abas por painel**: com a tela dividida, cada aba pertence a um painel. A barra junta as abas de cada painel, numeradas e separadas por uma linha; um clique numa aba a mostra no painel dela, seja qual for o painel focado, e **⇧⌘]** / **⇧⌘[** passam pelas abas do painel focado.
+- **Mover uma aba de painel**: arraste-a para o grupo do outro painel na barra, ou use **Mover para o painel** no menu da aba. Um painel que fica sem abas fecha.
 
 ## Novidades da versão 0.16.1
 
@@ -55,7 +60,7 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 ## Novidades da versão 0.8.0
 
 - **Split**: até quatro documentos lado a lado, em 2, 3 ou 4 colunas ou numa grade 2×2, com divisórias arrastáveis.
-- Cada painel tem um cabeçalho numerado; as abas mostram o número do painel onde estão. Comentários, chat e atalhos agem no painel focado.
+- Cada painel tem um cabeçalho numerado e as suas próprias abas, agrupadas na barra com o número dele. Comentários, chat e atalhos agem no painel focado.
 - **Abrir ao lado**, no menu do arquivo ou da aba, abre um documento num painel novo.
 - PDFs se ajustam à largura de painéis estreitos, até 100%.
 
@@ -160,9 +165,11 @@ Cada aba guarda onde a leitura estava: página, posição e zoom no PDF, rolagem
 
 ### Lado a lado
 
-Os botões de layout no fim da barra de abas (ou **Abas → Layout**, **⌥⌘1** a **⌥⌘5**) dividem a área de leitura em um painel, duas, três ou quatro colunas, ou numa grade 2×2. Ao ganhar painéis, eles recebem as próximas abas que não estão na tela; ao perder, as abas continuam na barra. Arraste as divisórias para mudar o tamanho dos painéis; o tamanho e o layout voltam na próxima abertura.
+Os botões de layout no fim da barra de abas (ou **Abas → Layout**, **⌥⌘1** a **⌥⌘5**) dividem a área de leitura em um painel, duas, três ou quatro colunas, ou numa grade 2×2. Ao ganhar painéis, cada painel novo recebe de volta as abas que já eram dele ou, se não tiver nenhuma, a próxima aba que não está na tela; ao perder, as abas dos painéis que saem passam para o último. Arraste as divisórias para mudar o tamanho dos painéis; o tamanho e o layout voltam na próxima abertura.
 
-Clique em qualquer ponto de um painel para focá-lo: o painel focado tem o número e o filete em verde, e a sidebar de comentários, o chat, os menus e os atalhos de zoom agem nele. Clicar numa aba que já está num painel foca esse painel; uma aba fora da tela abre no painel focado. **Abrir ao lado**, no menu de um arquivo da sidebar ou de uma aba, abre o documento num painel novo à direita.
+Clique em qualquer ponto de um painel para focá-lo: o painel focado tem o número e o filete em verde, e a sidebar de comentários, o chat, os menus e os atalhos de zoom agem nele. Clicar numa aba que já está num painel foca esse painel. **Abrir ao lado**, no menu de um arquivo da sidebar ou de uma aba, abre o documento num painel novo à direita.
+
+Com a tela dividida, cada aba pertence a um painel. A barra mostra as abas de cada painel juntas, na ordem dos painéis, com o número do painel em cada uma (mais apagado nas que não estão na tela) e uma linha fina entre um grupo e outro. Um clique numa aba a mostra no painel dela, seja qual for o painel focado, então dá para alternar dois documentos num painel e outros no outro. Um arquivo aberto entra no grupo do painel focado, e **⇧⌘]** / **⇧⌘[** passam só pelas abas do painel focado. Para mudar uma aba de painel, arraste-a na barra para dentro do grupo do outro painel (o número muda durante o arraste, e o painel troca quando você solta) ou use **Mover para o painel** no menu da aba. Ao fechar uma aba, o painel mostra outra do mesmo grupo; um painel que fica sem abas fecha, e as abas de um painel fechado pelo ✕ passam para o painel vizinho. Voltar a um painel só junta todas as abas, e dividir de novo devolve a cada painel as suas.
 
 Também dá para arrastar um arquivo da sidebar até a área de leitura: o destaque verde mostra onde ele vai entrar. No meio de um painel, o arquivo substitui o que está nele (a aba anterior continua na barra); na metade esquerda ou direita, abre num painel novo daquele lado, até quatro. Com quatro painéis, ou na grade, o painel inteiro é o destino. Um arquivo que já está num painel não é duplicado: o painel dele é focado. O ✕ do cabeçalho fecha o painel, não a aba. Um mesmo arquivo aparece em um painel por vez.
 
@@ -272,7 +279,7 @@ As imagens são snapshots das views de produção, renderizadas em AppKit com co
 | ⌥⌘G | Ir para uma página do PDF |
 | ⌘P | Imprimir o documento do painel focado |
 | ⇧⌘P | Configurar página |
-| ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior |
+| ⇧⌘] / ⇧⌘[ | Próxima aba / aba anterior (do painel focado) |
 | ⌘1 … ⌘8 / ⌘9 | Ir para a aba N / para a última aba |
 | ⌥⌘1 … ⌥⌘5 | Um painel / 2, 3 ou 4 colunas / grade 2×2 |
 | ⌃⌘Z | Entrar ou sair do modo zen |

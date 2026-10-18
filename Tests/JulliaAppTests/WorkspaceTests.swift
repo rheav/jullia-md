@@ -118,6 +118,62 @@ import Testing
         #expect(TabBar.slot(from: 1, moved: -500, stride: 100, count: 4) == 0)
     }
 
+    @Test func inASplitEachTabBelongsToItsPaneAndMovesBetweenThem() throws {
+        let (folder, files) = try makeFiles(["a.md", "b.md", "c.md", "d.md", "e.md"])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let suite = "dev.rheav.jullia.tabs.\(UUID().uuidString)"
+        let (model, defaults) = try makeModel(suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let workspace = model.workspace
+        func named(_ name: String) throws -> DocumentTab { try #require(workspace.tabs.first { $0.name == name }) }
+        func shown() -> [String?] { workspace.panes.map { workspace.tab($0.tabID)?.name } }
+        func groups() -> [Int] { workspace.tabs.map { workspace.group(of: $0) } }
+        for file in files.prefix(4) { model.openFile(file, as: .permanent) }
+        workspace.setLayout(.two)
+        #expect(workspace.tabs.map(\.name) == ["b.md", "c.md", "d.md", "a.md"], "The new pane's tab joins it at the end")
+        #expect(groups() == [0, 0, 0, 1])
+        #expect(shown() == ["d.md", "a.md"])
+
+        workspace.move(try named("c.md"), toPane: 1)
+        #expect(workspace.tabs.map(\.name) == ["b.md", "d.md", "a.md", "c.md"])
+        #expect(shown() == ["d.md", "c.md"])
+        workspace.focus(0)
+        workspace.select(try named("a.md"))
+        #expect(shown() == ["d.md", "a.md"], "A tab shows in its own pane, whichever is focused")
+        #expect(workspace.focusedPane == 1)
+        workspace.selectAdjacentTab(1)
+        #expect(shown() == ["d.md", "c.md"], "Next tab cycles within the pane")
+
+        workspace.focus(0)
+        model.openFile(files[4], as: .permanent)
+        #expect(workspace.tabs.map(\.name) == ["b.md", "d.md", "e.md", "a.md", "c.md"], "A new file joins the focused pane")
+        workspace.move(try named("e.md"), toPane: 1)
+        #expect(shown() == ["b.md", "e.md"], "The pane it leaves shows another of its tabs")
+
+        // Dragged along the bar: past the other pane's first tab it belongs there; at the meeting point, it stays.
+        workspace.move(try named("d.md"), to: 2)
+        #expect(workspace.tabs.map(\.name) == ["b.md", "a.md", "d.md", "c.md", "e.md"])
+        #expect(workspace.group(of: try named("d.md")) == 1)
+        workspace.move(try named("d.md"), to: 1)
+        #expect(workspace.group(of: try named("d.md")) == 1)
+        workspace.settle(try named("d.md"))
+        #expect(shown() == ["b.md", "d.md"])
+
+        model.prepareToQuit()
+        let (reopened, _) = try makeModel(suite)
+        #expect(reopened.workspace.tabs.map(\.name) == workspace.tabs.map(\.name))
+        #expect(reopened.workspace.tabs.map { reopened.workspace.group(of: $0) } == groups())
+
+        workspace.setLayout(.one)
+        #expect(groups() == [0, 0, 0, 0, 0])
+        workspace.setLayout(.two)
+        #expect(groups() == [0, 1, 1, 1, 1], "Dividing again gives the second pane its tabs back")
+
+        workspace.move(try named("b.md"), toPane: 1)
+        #expect(workspace.panes.count == 1, "A pane left without tabs closes")
+        #expect(groups() == [0, 0, 0, 0, 0])
+    }
+
     @Test func sessionRestoresTabsLazilyAndMigratesTheLastFile() throws {
         let (folder, files) = try makeFiles(["a.md", "b.md", "c.md"])
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -203,16 +259,16 @@ import Testing
         workspace.focus(1)
         #expect(model.document?.url == files[1])
 
-        // A hidden tab goes into the focused pane.
+        // A hidden tab goes into the pane it belongs to, not the focused one.
         workspace.select(try #require(workspace.tab(for: files[3])))
-        #expect(workspace.focusedPane == 1)
-        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["a.md", "d.md", "c.md"])
+        #expect(workspace.focusedPane == 0)
+        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["d.md", "b.md", "c.md"])
 
         // Beside: a new pane right of the focused one, up to four.
         model.openFile(files[4], as: .beside)
         #expect(workspace.layout == .four)
-        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["a.md", "d.md", "e.md", "c.md"])
-        #expect(workspace.focusedPane == 2)
+        #expect(workspace.panes.map { workspace.tab($0.tabID)?.name } == ["d.md", "e.md", "b.md", "c.md"])
+        #expect(workspace.focusedPane == 1)
 
         workspace.setLayout(.grid)
         #expect(workspace.panes.count == 4)
