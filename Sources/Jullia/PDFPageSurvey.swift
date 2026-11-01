@@ -6,7 +6,10 @@ import PDFKit
 struct PDFPageSurvey: Equatable {
     var recolors: Bool
     /// Pictures that keep their pixels, where the page shows them: from its lower left corner, with its rotation.
-    var pictures: [CGRect]
+    var pictures: [CGRect] = []
+    /// The same pictures on the unrotated page, from its crop box's corner: where an overlay view has them, since
+    /// PDFKit turns the overlay with the page.
+    var unrotatedPictures: [CGRect] = []
     /// The page as shown, with its rotation.
     var size: CGSize
 
@@ -14,27 +17,25 @@ struct PDFPageSurvey: Equatable {
     private static let pictureArea: CGFloat = 400
 
     init(page: PDFPage) {
+        let crop = page.bounds(for: .cropBox)
         let transform = page.transform(for: .cropBox)
-        let shown = page.bounds(for: .cropBox).applying(transform)
+        let shown = crop.applying(transform)
         size = shown.size
         guard let tones = Tones(page: page, size: shown.size) else {
             recolors = false
-            pictures = []
             return
         }
         let whole = tones.measure(CGRect(origin: .zero, size: shown.size))
         recolors = whole.median >= Self.paperMedian && whole.midTones < 0.55
-        guard recolors else {
-            pictures = []
-            return
+        guard recolors else { return }
+        for image in PDFImageScan.rects(on: page) {
+            let rect = image.applying(transform).offsetBy(dx: -shown.minX, dy: -shown.minY)
+            guard rect.width * rect.height >= Self.pictureArea else { continue }
+            let picture = tones.measure(rect)
+            guard picture.median < Self.paperMedian || picture.midTones >= 0.45 else { continue }
+            pictures.append(rect)
+            unrotatedPictures.append(image.offsetBy(dx: -crop.minX, dy: -crop.minY))
         }
-        pictures = PDFImageScan.rects(on: page)
-            .map { $0.applying(transform).offsetBy(dx: -shown.minX, dy: -shown.minY) }
-            .filter { rect in
-                guard rect.width * rect.height >= Self.pictureArea else { return false }
-                let picture = tones.measure(rect)
-                return picture.median < Self.paperMedian || picture.midTones >= 0.45
-            }
     }
 }
 

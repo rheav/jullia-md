@@ -42,7 +42,8 @@ final class PDFPaperOverlay: NSView {
         let survey = survey ?? PDFPageSurvey(page: page)
         self.survey = survey
         layer?.backgroundFilters = survey.recolors ? [filter] : []
-        layer?.mask = survey.pictures.isEmpty ? nil : Self.mask(size: survey.size, cutting: survey.pictures)
+        layer?.mask = survey.unrotatedPictures.isEmpty ? nil
+            : Self.mask(size: page.bounds(for: .cropBox).size, cutting: survey.unrotatedPictures)
     }
 
     private static func mask(size: CGSize, cutting pictures: [CGRect]) -> CAShapeLayer {

@@ -289,6 +289,43 @@ private enum Pages {
         #expect(!path.contains(CGPoint(x: rect.midX, y: rect.midY), using: .evenOdd))
     }
 
+    /// PDFKit turns the overlay with the page, so its mask stays in the unrotated page, whatever the rotation.
+    @Test(arguments: [90, 180, 270]) func theCutFollowsTheOverlayOnARotatedPage(rotation: Int) throws {
+        let image = Pages.photo()
+        let rect = CGRect(x: 60, y: 300, width: 300, height: 200)
+        let document = try Pages.document([{ context in
+            Pages.text(context)
+            context.draw(image, in: rect)
+        }])
+        let page = try #require(document.page(at: 0))
+        page.rotation = rotation
+        let overlay = PDFPaperOverlay(page: page)
+        overlay.show(try filter())
+        let mask = try #require(overlay.layer?.mask as? CAShapeLayer)
+        #expect(mask.frame.size == CGSize(width: 600, height: 800))
+        let path = try #require(mask.path)
+        #expect(path.boundingBox == CGRect(x: 0, y: 0, width: 600, height: 800))
+        #expect(!path.contains(CGPoint(x: rect.midX, y: rect.midY), using: .evenOdd))
+        #expect(path.contains(CGPoint(x: 500, y: 700), using: .evenOdd))
+    }
+
+    @Test func theCutFollowsACropBoxThatDoesNotStartAtZero() throws {
+        let image = Pages.photo()
+        let document = try Pages.document([{ context in
+            Pages.text(context)
+            context.draw(image, in: CGRect(x: 60, y: 300, width: 300, height: 200))
+        }])
+        let page = try #require(document.page(at: 0))
+        page.setBounds(CGRect(x: 30, y: 120, width: 540, height: 640), for: .cropBox)
+        let overlay = PDFPaperOverlay(page: page)
+        overlay.show(try filter())
+        let mask = try #require(overlay.layer?.mask as? CAShapeLayer)
+        #expect(mask.frame.size == CGSize(width: 540, height: 640))
+        let path = try #require(mask.path)
+        #expect(!path.contains(CGPoint(x: 180, y: 280), using: .evenOdd))
+        #expect(path.contains(CGPoint(x: 10, y: 10), using: .evenOdd))
+    }
+
     @Test func thePaperReachesOverlaysAlreadyOnScreen() throws {
         let (view, document, app, window, folder) = try reader([Pages.text])
         defer {
