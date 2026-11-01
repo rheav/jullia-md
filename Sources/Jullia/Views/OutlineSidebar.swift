@@ -20,7 +20,7 @@ struct OutlineSidebar: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             if document.isPDF && showsPages {
-                PageThumbnails(document: document, theme: theme)
+                PageThumbnails(document: document, theme: theme, paper: model.settings.pdfPaper)
             } else {
                 headings
             }
@@ -121,6 +121,7 @@ private struct OutlineRow: View {
 private struct PageThumbnails: View {
     let document: DocumentModel
     let theme: Theme
+    let paper: PDFPaper?
 
     var body: some View {
         let count = document.pdfDocument?.pageCount ?? 0
@@ -131,7 +132,7 @@ private struct PageThumbnails: View {
                     ForEach(0..<count, id: \.self) { index in
                         Button { document.goToPDFPage(index) } label: {
                             PageThumbnail(page: document.pdfDocument?.page(at: index), number: index + 1,
-                                          current: index == current, theme: theme)
+                                          current: index == current, theme: theme, paper: paper)
                         }
                         .buttonStyle(.plain)
                         .id(index)
@@ -155,12 +156,18 @@ private struct PageThumbnail: View {
     let number: Int
     let current: Bool
     let theme: Theme
+    let paper: PDFPaper?
     @State private var image: NSImage?
+
+    private struct Look: Hashable {
+        var page: ObjectIdentifier?
+        var paper: PDFPaper?
+    }
 
     var body: some View {
         VStack(spacing: 5) {
             ZStack {
-                Color.white
+                paper?.paper.color ?? .white
                 if let image { Image(nsImage: image).resizable().aspectRatio(contentMode: .fit) }
             }
             .aspectRatio(aspect, contentMode: .fit)
@@ -174,8 +181,8 @@ private struct PageThumbnail: View {
                 .foregroundStyle(current ? theme.accent.color : theme.secondaryText.color)
         }
         .contentShape(Rectangle())
-        .task(id: page.map(ObjectIdentifier.init)) {
-            image = page?.thumbnail(of: NSSize(width: 260, height: 260 / aspect), for: .cropBox)
+        .task(id: Look(page: page.map(ObjectIdentifier.init), paper: paper)) {
+            image = page?.thumbnail(of: NSSize(width: 260, height: 260 / aspect), on: paper)
         }
     }
 

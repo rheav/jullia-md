@@ -6,9 +6,14 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ![Jullia.md no tema Polar, com navegação de arquivos, destaques e comentários](docs/screenshots/polar.png)
 
-**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.17.0**
+**macOS 27+ · Swift 6.4 · Interface em português · Versão 0.18.0**
 
 [Instalação](#instalação) · [PDFs](#pdfs) · [Chat com IA](#chat-com-ia) · [Temas](#temas-e-aparência) · [Atalhos](#atalhos) · [Desenvolvimento](#desenvolvimento)
+
+## Novidades da versão 0.18.0
+
+- **PDF escuro**: nos temas Polar e Ink, as páginas claras do PDF escurecem sem virar preto puro, e as cores do documento continuam dizendo o que diziam: vermelho segue vermelho, e um destaque amarelo segue amarelo. Páginas já escuras e fotos ficam como estão, e o arquivo nunca muda: impressão e **Salvar como PDF** saem com as páginas originais.
+- **Quatro tons**: escolha em **Ajustes → Aparência → PDF escuro**, com prévia animada. Passe o ponteiro por um tom para vê-lo na prévia; um clique aplica no PDF aberto. O botão ao lado do zoom liga e desliga.
 
 ## Novidades da versão 0.17.0
 
@@ -193,7 +198,9 @@ Na sidebar de comentários, você pode iniciar uma conversa sobre o documento in
 
 PDFs abrem no leitor nativo PDFKit. Selecione texto para destacar, comentar ou copiar; clique em um destaque para mudar sua cor ou removê-lo. Clicar em um comentário na sidebar navega até o trecho. As seleções podem atravessar páginas e as anotações continuam disponíveis ao reabrir o arquivo.
 
-A barra do PDF mostra a página atual e oferece zoom e ajuste à janela. Ao abrir, a página acompanha a largura do painel sem passar de 100%, então cabe inteira num painel estreito; **Ajustar** preenche a largura do painel. Com um PDF aberto, **⌘+**, **⌘−** e **⌘0** controlam o zoom. As cores do documento original são preservadas; os temas alteram a interface e as marcações do Jullia.
+A barra do PDF mostra a página atual e oferece zoom e ajuste à janela. Ao abrir, a página acompanha a largura do painel sem passar de 100%, então cabe inteira num painel estreito; **Ajustar** preenche a largura do painel. Com um PDF aberto, **⌘+**, **⌘−** e **⌘0** controlam o zoom. Nos temas claros, as cores do documento original são preservadas; os temas alteram a interface e as marcações do Jullia.
+
+Nos temas escuros, **PDF escuro** recolore as páginas claras só na tela: branco vira o tom escolhido, preto vira um claro suave, e as cores mantêm a matiz. Polar oferece Contínuo, Nord, Painel e Suave; Ink, Contínuo, Grafite, Painel e Suave. Páginas já escuras ou tomadas por imagens ficam como estão, e fotos mantêm as cores; um screenshot claro, como uma tabela, escurece com a página. Gradientes e ilustrações vetoriais são recoloridos junto com a página: nesses PDFs, desligue pelo botão ao lado do zoom ou em **Ajustes → Aparência**.
 
 PDFs protegidos pedem senha, que não é salva. PDFs sem texto extraível podem ser visualizados e receber comentários sobre o documento inteiro; reconhecimento de texto em imagens (OCR) não está incluído. As anotações ficam no SQLite, não são gravadas nem exportadas para o PDF. Marcações já existentes no arquivo continuam visíveis e não são importadas como conversas do Jullia.
 

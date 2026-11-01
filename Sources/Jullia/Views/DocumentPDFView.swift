@@ -30,7 +30,8 @@ struct PDFReader: View {
                 if !model.zen { toolbar }
                 if document.pdfFind.isVisible { PDFFindBar(find: document.pdfFind, theme: theme) }
                 // In zen the space around the pages is the window's glass, as nothing else is left on screen.
-                DocumentPDFView(document: document, theme: theme, appModel: model, seeThrough: model.zen)
+                DocumentPDFView(document: document, theme: theme, appModel: model, seeThrough: model.zen,
+                                paper: model.settings.pdfPaper)
             }
             .alert("Ir para a página", isPresented: $document.askingForPage) {
                 TextField("Página", text: $pageText)
@@ -57,6 +58,15 @@ struct PDFReader: View {
             }
             .help("Ir para a página (⌥⌘G)")
             Spacer()
+            if theme.isDark {
+                let dark = model.settings.pdfDark
+                Button { model.settings.pdfDark.toggle() } label: {
+                    Image(systemName: "circle.lefthalf.filled")
+                        .foregroundStyle(dark ? theme.accent.color : theme.secondaryText.color)
+                }
+                .help(dark ? "Mostrar as cores originais do PDF" : "Escurecer as páginas do PDF")
+                .accessibilityLabel("PDF escuro")
+            }
             Button { document.zoomPDF(-1) } label: { Image(systemName: "minus.magnifyingglass") }
                 .help("Diminuir zoom (⌘−)")
             Button("Ajustar") { document.zoomPDF(0) }.help("Ajustar à janela (⌘0)")
@@ -133,6 +143,8 @@ struct DocumentPDFView: NSViewRepresentable {
     let appModel: AppModel
     /// The area around the pages lets the window's tint and blur through instead of painting the theme background.
     var seeThrough = false
+    /// The dark paper for the pages; nil keeps their original colours.
+    var paper: PDFPaper?
 
     func makeNSView(context: Context) -> AnnotatedPDFView {
         let view = AnnotatedPDFView()
@@ -141,12 +153,13 @@ struct DocumentPDFView: NSViewRepresentable {
         // Setting the scale limits turns PDFKit's autoScales off; the view fits the page itself (see `fitsPane`).
         view.minScaleFactor = 0.1
         view.maxScaleFactor = 8
+        view.pageOverlayViewProvider = view
         view.installObservers()
         return view
     }
 
     func updateNSView(_ view: AnnotatedPDFView, context: Context) {
-        view.update(model: document, theme: theme, appModel: appModel, seeThrough: seeThrough)
+        view.update(model: document, theme: theme, appModel: appModel, seeThrough: seeThrough, paper: paper)
     }
 
     static func dismantleNSView(_ view: AnnotatedPDFView, coordinator: ()) {
@@ -162,6 +175,9 @@ final class AnnotatedPDFView: PDFView {
     private var theme: Theme = .polar
     private var decorations: [Decoration] = []
     private var marks: [PDFAnnotation] = []
+    private var paper: PDFPaper?
+    private var paperFilter: CIFilter?
+    private var paperOverlays: [PDFPaperOverlay] = []
     private var pill: NSHostingView<SelectionPill>?
     private var mouseMonitor: Any?
     private var scrollToken = 0
@@ -209,6 +225,7 @@ final class AnnotatedPDFView: PDFView {
         mouseMonitor = nil
         NotificationCenter.default.removeObserver(self)
         removeMarks()
+        paperOverlays.removeAll()
         pill?.removeFromSuperview()
         pill = nil
         model?.selectPDF(nil)
@@ -216,7 +233,7 @@ final class AnnotatedPDFView: PDFView {
         document = nil
     }
 
-    func update(model: DocumentModel, theme: Theme, appModel: AppModel, seeThrough: Bool = false) {
+    func update(model: DocumentModel, theme: Theme, appModel: AppModel, seeThrough: Bool = false, paper: PDFPaper? = nil) {
         updating = true
         defer { updating = false }
         self.model = model
@@ -228,6 +245,13 @@ final class AnnotatedPDFView: PDFView {
         if let scrollView = subviews.lazy.compactMap({ $0 as? NSScrollView }).first {
             scrollView.drawsBackground = !seeThrough
             scrollView.contentView.drawsBackground = !seeThrough
+        }
+        if self.paper != paper {
+            self.paper = paper
+            paperFilter = paper?.filter
+            // The filter would turn the shadow into a halo around the page.
+            pageShadowsEnabled = paper == nil
+            for overlay in paperOverlays { overlay.show(paperFilter) }
         }
         if document !== model.pdfDocument {
             let firstAttach = document == nil
@@ -249,7 +273,8 @@ final class AnnotatedPDFView: PDFView {
             hidePill()
             pageChanged()
         }
-        let next = model.decorations(theme: theme)
+        // Marks are painted on the page before the paper darkens it, so they need the colours made for a light page.
+        let next = model.decorations(theme: paper == nil ? theme : .snow)
         if decorations != next {
             removeMarks()
             decorations = next
@@ -461,7 +486,7 @@ final class AnnotatedPDFView: PDFView {
         host.rootView = content
         if pill == nil { addSubview(host); pill = host }
         let size = host.fittingSize
-        // PDF pages keep their original colors, so the controls need their own contrasting surface.
+        // PDF pages can be any colour, so the controls need their own contrasting surface.
         host.wantsLayer = true
         host.layer?.backgroundColor = theme.surface.ns.withAlphaComponent(0.94).cgColor
         host.layer?.cornerRadius = size.height / 2
@@ -527,5 +552,19 @@ final class AnnotatedPDFView: PDFView {
             })
         }
         return menu
+    }
+}
+
+extension AnnotatedPDFView: @MainActor PDFPageOverlayViewProvider {
+    func pdfView(_ view: PDFView, overlayViewFor page: PDFPage) -> NSView? { PDFPaperOverlay(page: page) }
+
+    func pdfView(_ pdfView: PDFView, willDisplayOverlayView overlayView: NSView, for page: PDFPage) {
+        guard let overlay = overlayView as? PDFPaperOverlay else { return }
+        overlay.show(paperFilter)
+        paperOverlays.append(overlay)
+    }
+
+    func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: NSView, for page: PDFPage) {
+        paperOverlays.removeAll { $0 === overlayView }
     }
 }

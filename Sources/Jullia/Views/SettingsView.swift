@@ -82,6 +82,8 @@ private struct AppearanceSettings: View {
                 .padding(.vertical, 4)
             }
 
+            PDFToneSection()
+
             Section {
                 GlassRow(title: "Janela", subtitle: "Fundo do documento", glass: $settings.windowGlass)
                 GlassRow(title: "Sidebar de arquivos", subtitle: nil, glass: $settings.filesGlass)
@@ -97,7 +99,8 @@ private struct AppearanceSettings: View {
             }
         }
         .formStyle(.grouped)
-        .fixedSize(horizontal: false, vertical: true)
+        // All its sections are taller than a laptop's screen, so the form scrolls instead of the window growing.
+        .frame(height: 680)
     }
 
     private func isSelected(_ id: ThemeID) -> Bool {

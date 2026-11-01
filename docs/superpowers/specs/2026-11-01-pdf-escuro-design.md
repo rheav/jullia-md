@@ -27,6 +27,7 @@ O tema só pinta o fundo em volta das páginas (`AnnotatedPDFView.update`). O PD
 - Ajustes → Aparência → **PDF escuro**: chave, prévia animada (0,28 s, respeita "Reduzir movimento"), quatro cartões. Passar o mouse mostra na prévia; clicar aplica.
 - Botão na barra do PDF, só em tema escuro: liga e desliga.
 - A chave é global, ligada por padrão, com o tom **Painel**.
+- A aba Aparência passa a ter altura fixa e rolar: com a nova seção, ela passaria da altura de um notebook.
 - Tons por tema, com papel e tinta:
   - Polar: Contínuo `#2A2F3C`, Nord `#2E3440`, Painel `#323848` (tinta `#D8DEE9`), Suave `#3B4252` (tinta `#E5E9F0`).
   - Ink: Contínuo `#121214`, Grafite `#17171A`, Painel `#1B1B1E`, Suave `#26262B` (tinta `#E6E1D6`).

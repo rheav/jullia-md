@@ -11,6 +11,13 @@ public struct RGBA: Hashable, Sendable {
         self.alpha = alpha
     }
 
+    public init(red: Double, green: Double, blue: Double, alpha: Double = 1) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+    }
+
     public func alpha(_ value: Double) -> RGBA {
         var copy = self
         copy.alpha = value
@@ -76,8 +83,15 @@ public struct Theme: Sendable, Identifiable {
     public var rule: RGBA
     public var selection: RGBA
     public var marks: [MarkColor: MarkTone]
+    /// The tones a PDF's pages can take, from the darkest; none in a light theme, where pages keep their colours.
+    public var pdfPapers: [PDFPaper] = []
 
     public func tone(_ color: MarkColor) -> MarkTone { marks[color]! }
+
+    /// The paper of a saved tone, which an older build may have left out of range.
+    public func pdfPaper(_ tone: Int) -> PDFPaper? {
+        pdfPapers.isEmpty ? nil : pdfPapers[min(max(tone, 0), pdfPapers.count - 1)]
+    }
 
     static func marks(fills: [UInt32], fillAlpha: Double, strokes: [UInt32]? = nil) -> [MarkColor: MarkTone] {
         var result: [MarkColor: MarkTone] = [:]
@@ -98,7 +112,13 @@ public struct Theme: Sendable, Identifiable {
         codeBackground: RGBA(0x363D4E), codeText: RGBA(0xB2DBA4),
         quoteBar: RGBA(0x9CCF86), quoteText: RGBA(0xAEB9CD),
         rule: RGBA(0xD9E0EE, alpha: 0.16), selection: RGBA(0x9CCF86, alpha: 0.28),
-        marks: marks(fills: [0xF2CF94, 0xB2DBA4, 0x8ECAE6, 0xE79AA4, 0xCBAAD9, 0xF2B48A], fillAlpha: 0.30)
+        marks: marks(fills: [0xF2CF94, 0xB2DBA4, 0x8ECAE6, 0xE79AA4, 0xCBAAD9, 0xF2B48A], fillAlpha: 0.30),
+        pdfPapers: [
+            PDFPaper(name: "Contínuo", paper: RGBA(0x2A2F3C), ink: RGBA(0xD8DEE9)),
+            PDFPaper(name: "Nord", paper: RGBA(0x2E3440), ink: RGBA(0xD8DEE9)),
+            PDFPaper(name: "Painel", paper: RGBA(0x323848), ink: RGBA(0xD8DEE9)),
+            PDFPaper(name: "Suave", paper: RGBA(0x3B4252), ink: RGBA(0xE5E9F0)),
+        ]
     )
 
     public static let ink = Theme(
@@ -109,7 +129,13 @@ public struct Theme: Sendable, Identifiable {
         codeBackground: RGBA(0x211F1D), codeText: RGBA(0xD8C7A4),
         quoteBar: RGBA(0xA8CF8E), quoteText: RGBA(0xA39C8F),
         rule: RGBA(0xE6E1D6, alpha: 0.13), selection: RGBA(0xA8CF8E, alpha: 0.26),
-        marks: marks(fills: [0xE8C872, 0x9CC78F, 0x86B4D4, 0xE39AA0, 0xBFA2D6, 0xF2B48A], fillAlpha: 0.28)
+        marks: marks(fills: [0xE8C872, 0x9CC78F, 0x86B4D4, 0xE39AA0, 0xBFA2D6, 0xF2B48A], fillAlpha: 0.28),
+        pdfPapers: [
+            PDFPaper(name: "Contínuo", paper: RGBA(0x121214), ink: RGBA(0xE6E1D6)),
+            PDFPaper(name: "Grafite", paper: RGBA(0x17171A), ink: RGBA(0xE6E1D6)),
+            PDFPaper(name: "Painel", paper: RGBA(0x1B1B1E), ink: RGBA(0xE6E1D6)),
+            PDFPaper(name: "Suave", paper: RGBA(0x26262B), ink: RGBA(0xE6E1D6)),
+        ]
     )
 
     public static let snow = Theme(

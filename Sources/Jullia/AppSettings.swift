@@ -47,6 +47,9 @@ final class AppSettings {
     var readingWidth: Double { didSet { defaults.set(readingWidth, forKey: "readingWidth") } }
     /// The colour ⌘⇧H highlights with: the last one picked.
     var lastColor: MarkColor { didSet { defaults.set(lastColor.rawValue, forKey: "lastColor") } }
+    /// Whether the dark themes darken PDF pages too, and which of the theme's papers.
+    var pdfDark: Bool { didSet { defaults.set(pdfDark, forKey: "pdfDark") } }
+    var pdfTone: Int { didSet { defaults.set(pdfTone, forKey: "pdfTone") } }
 
     /// Whether macOS itself is in Dark Mode, independent of the appearance this app forces on its windows.
     private(set) var systemIsDark: Bool
@@ -58,7 +61,7 @@ final class AppSettings {
         self.defaults = defaults
         defaults.register(defaults: [
             "followSystem": true, "reopenFolders": true, "liveReload": true,
-            "fontSize": 16.0, "readingWidth": 760.0,
+            "fontSize": 16.0, "readingWidth": 760.0, "pdfDark": true, "pdfTone": 2,
         ])
         followSystem = defaults.bool(forKey: "followSystem")
         darkTheme = ThemeID(rawValue: defaults.string(forKey: "darkTheme") ?? "") ?? .polar
@@ -72,6 +75,8 @@ final class AppSettings {
         fontSize = defaults.double(forKey: "fontSize")
         readingWidth = defaults.double(forKey: "readingWidth")
         lastColor = MarkColor(rawValue: defaults.string(forKey: "lastColor") ?? "") ?? .yellow
+        pdfDark = defaults.bool(forKey: "pdfDark")
+        pdfTone = defaults.integer(forKey: "pdfTone")
         systemIsDark = Self.readSystemIsDark()
 
         appearanceObserver = DistributedNotificationCenter.default().addObserver(
@@ -90,6 +95,9 @@ final class AppSettings {
     var theme: Theme {
         (followSystem ? (systemIsDark ? darkTheme : lightTheme) : fixedTheme).theme
     }
+
+    /// The paper PDF pages take now; nil keeps their original colours.
+    var pdfPaper: PDFPaper? { pdfDark ? theme.pdfPaper(pdfTone) : nil }
 
     /// Picks a theme from the View menu or a theme card: it becomes the theme in use.
     func choose(_ id: ThemeID) {
