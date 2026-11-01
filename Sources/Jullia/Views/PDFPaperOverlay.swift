@@ -14,47 +14,52 @@ extension PDFPaper {
     }
 }
 
-/// Recolours one page from above, after PDFKit has painted it. PDFKit paints selections and highlights last, in
-/// multiply, which vanishes on a page already dark; from above they change colour with the page. The document is left
-/// as it is, so printing gives the original pages.
+/// Recolours the pages on screen from above, after PDFKit has painted them. PDFKit paints selections and highlights
+/// last, in multiply, which vanishes on a page already dark; from above they change colour with the page. The document
+/// is left as it is, so printing gives the original pages. The overlay stays outside PDFKit's clip view: under the clip
+/// view's zoom a background filter reads the page at its unzoomed size and the text blurs.
 final class PDFPaperOverlay: NSView {
-    private let page: PDFPage
-    private var survey: PDFPageSurvey?
+    private let mask = CAShapeLayer()
+    private var surveys: [PDFPage: PDFPageSurvey] = [:]
 
-    init(page: PDFPage) {
-        self.page = page
-        super.init(frame: .zero)
+    override init(frame: NSRect) {
+        super.init(frame: frame)
         wantsLayer = true
         layerUsesCoreImageFilters = true
+        mask.fillRule = .evenOdd
+        layer?.mask = mask
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-    /// Clicks and drags belong to the page underneath.
+    /// Clicks and drags belong to the pages underneath.
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     func show(_ filter: CIFilter?) {
-        guard let filter else {
-            layer?.backgroundFilters = []
-            return
-        }
-        let survey = survey ?? PDFPageSurvey(page: page)
-        self.survey = survey
-        layer?.backgroundFilters = survey.recolors ? [filter] : []
-        layer?.mask = survey.unrotatedPictures.isEmpty ? nil
-            : Self.mask(size: page.bounds(for: .cropBox).size, cutting: survey.unrotatedPictures)
+        layer?.backgroundFilters = filter.map { [$0] } ?? []
     }
 
-    private static func mask(size: CGSize, cutting pictures: [CGRect]) -> CAShapeLayer {
+    /// Lets the filter through on `pages`, where `view` shows them, around the pictures that keep their pixels.
+    func cover(_ pages: [PDFPage], in view: PDFView) {
         let path = CGMutablePath()
-        path.addRect(CGRect(origin: .zero, size: size))
-        path.addRects(pictures)
-        let mask = CAShapeLayer()
-        mask.frame = CGRect(origin: .zero, size: size)
+        for page in pages {
+            let survey = surveys[page] ?? PDFPageSurvey(page: page)
+            surveys[page] = survey
+            guard survey.recolors else { continue }
+            let rects = [page.bounds(for: .cropBox)] + survey.picturesOnPage
+            path.addRects(rects.map { convert(view.convert($0, from: page), from: view) })
+        }
+        // The pages move in this same frame; an animated mask would trail them.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        mask.frame = bounds
         mask.path = path
-        mask.fillRule = .evenOdd
-        return mask
+        CATransaction.commit()
+    }
+
+    func forgetPages() {
+        surveys.removeAll()
     }
 }
 

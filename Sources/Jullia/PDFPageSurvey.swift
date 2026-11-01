@@ -7,9 +7,8 @@ struct PDFPageSurvey: Equatable {
     var recolors: Bool
     /// Pictures that keep their pixels, where the page shows them: from its lower left corner, with its rotation.
     var pictures: [CGRect] = []
-    /// The same pictures on the unrotated page, from its crop box's corner: where an overlay view has them, since
-    /// PDFKit turns the overlay with the page.
-    var unrotatedPictures: [CGRect] = []
+    /// The same pictures in the page's own coordinates, as `PDFView.convert(_:from:)` takes them.
+    var picturesOnPage: [CGRect] = []
     /// The page as shown, with its rotation.
     var size: CGSize
 
@@ -34,7 +33,7 @@ struct PDFPageSurvey: Equatable {
             let picture = tones.measure(rect)
             guard picture.median < Self.paperMedian || picture.midTones >= 0.45 else { continue }
             pictures.append(rect)
-            unrotatedPictures.append(image.offsetBy(dx: -crop.minX, dy: -crop.minY))
+            picturesOnPage.append(image)
         }
     }
 }

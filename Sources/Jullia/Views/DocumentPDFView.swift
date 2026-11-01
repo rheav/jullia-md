@@ -153,7 +153,6 @@ struct DocumentPDFView: NSViewRepresentable {
         // Setting the scale limits turns PDFKit's autoScales off; the view fits the page itself (see `fitsPane`).
         view.minScaleFactor = 0.1
         view.maxScaleFactor = 8
-        view.pageOverlayViewProvider = view
         view.installObservers()
         return view
     }
@@ -176,8 +175,7 @@ final class AnnotatedPDFView: PDFView {
     private var decorations: [Decoration] = []
     private var marks: [PDFAnnotation] = []
     private var paper: PDFPaper?
-    private var paperFilter: CIFilter?
-    private var paperOverlays: [PDFPaperOverlay] = []
+    let paperOverlay = PDFPaperOverlay()
     private var pill: NSHostingView<SelectionPill>?
     private var mouseMonitor: Any?
     private var scrollToken = 0
@@ -202,6 +200,11 @@ final class AnnotatedPDFView: PDFView {
         center.addObserver(self, selector: #selector(selectionChanged), name: .PDFViewSelectionChanged, object: self)
         center.addObserver(self, selector: #selector(pageChanged), name: .PDFViewPageChanged, object: self)
         center.addObserver(self, selector: #selector(viewportChanged), name: .PDFViewScaleChanged, object: self)
+        if let scrollView {
+            scrollView.addSubview(paperOverlay, positioned: .above, relativeTo: scrollView.contentView)
+            scrollView.contentView.postsBoundsChangedNotifications = true
+            center.addObserver(self, selector: #selector(placePaper), name: NSView.boundsDidChangeNotification, object: scrollView.contentView)
+        }
         // PDFKit's inner document view receives mouse events. Observe their completion without consuming them.
         mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .scrollWheel]) { [weak self] event in
             MainActor.assumeIsolated {
@@ -225,7 +228,7 @@ final class AnnotatedPDFView: PDFView {
         mouseMonitor = nil
         NotificationCenter.default.removeObserver(self)
         removeMarks()
-        paperOverlays.removeAll()
+        paperOverlay.forgetPages()
         pill?.removeFromSuperview()
         pill = nil
         model?.selectPDF(nil)
@@ -242,16 +245,15 @@ final class AnnotatedPDFView: PDFView {
         self.theme = theme
         backgroundColor = seeThrough ? .clear : theme.background.ns
         // PDFKit's inner scroll view paints its own gray behind a clear background; it has to stop too.
-        if let scrollView = subviews.lazy.compactMap({ $0 as? NSScrollView }).first {
+        if let scrollView {
             scrollView.drawsBackground = !seeThrough
             scrollView.contentView.drawsBackground = !seeThrough
         }
         if self.paper != paper {
             self.paper = paper
-            paperFilter = paper?.filter
-            // The filter would turn the shadow into a halo around the page.
             pageShadowsEnabled = paper == nil
-            for overlay in paperOverlays { overlay.show(paperFilter) }
+            paperOverlay.show(paper?.filter)
+            placePaper()
         }
         if document !== model.pdfDocument {
             let firstAttach = document == nil
@@ -272,6 +274,8 @@ final class AnnotatedPDFView: PDFView {
             decorations = []
             hidePill()
             pageChanged()
+            paperOverlay.forgetPages()
+            placePaper()
         }
         // Marks are painted on the page before the paper darkens it, so they need the colours made for a light page.
         let next = model.decorations(theme: paper == nil ? theme : .snow)
@@ -382,6 +386,24 @@ final class AnnotatedPDFView: PDFView {
         super.layout()
         restorePosition()
         fitToPane()
+        placePaper()
+    }
+
+    private var scrollView: NSScrollView? { subviews.lazy.compactMap { $0 as? NSScrollView }.first }
+
+    /// The overlay stays still while the pages move under it, so its cover follows them.
+    @objc private func placePaper() {
+        guard paper != nil, let scrollView else { return }
+        paperOverlay.frame = scrollView.contentView.frame
+        paperOverlay.cover(pagesOnScreen, in: self)
+    }
+
+    /// From the view's top edge to its bottom one. `visiblePages` lags the scroll and leaves the next page out, white.
+    private var pagesOnScreen: [PDFPage] {
+        guard let document, let top = page(for: NSPoint(x: bounds.midX, y: bounds.maxY), nearest: true),
+              let bottom = page(for: NSPoint(x: bounds.midX, y: bounds.minY), nearest: true) else { return [] }
+        let ends = [document.index(for: top), document.index(for: bottom)]
+        return (ends.min()!...ends.max()!).compactMap(document.page(at:))
     }
 
     /// Back to where the reader was, once the view is laid out (a destination means nothing at zero size).
@@ -552,19 +574,5 @@ final class AnnotatedPDFView: PDFView {
             })
         }
         return menu
-    }
-}
-
-extension AnnotatedPDFView: @MainActor PDFPageOverlayViewProvider {
-    func pdfView(_ view: PDFView, overlayViewFor page: PDFPage) -> NSView? { PDFPaperOverlay(page: page) }
-
-    func pdfView(_ pdfView: PDFView, willDisplayOverlayView overlayView: NSView, for page: PDFPage) {
-        guard let overlay = overlayView as? PDFPaperOverlay else { return }
-        overlay.show(paperFilter)
-        paperOverlays.append(overlay)
-    }
-
-    func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: NSView, for page: PDFPage) {
-        paperOverlays.removeAll { $0 === overlayView }
     }
 }
