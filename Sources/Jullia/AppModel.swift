@@ -119,12 +119,12 @@ final class AppModel {
         defaults.set(recents.map(\.path), forKey: "recents")
     }
 
-    /// A file being dragged out of the sidebar: while set, the panes show where it can be dropped.
+    /// A file being dragged out of the sidebar, so letting it go over the sidebar again does not open it.
     private(set) var draggedFile: URL?
     @ObservationIgnored private var dragWatch: Task<Void, Never>?
 
-    /// Called when a drag leaves the sidebar. The drop targets go away when the mouse button is released, wherever
-    /// the drag ends (a drag cancelled over the sidebar never reaches them).
+    /// Called when a drag leaves the sidebar. Cleared when the mouse button is released, wherever the drag ends (a
+    /// drag cancelled over the sidebar never reaches a pane).
     func beginFileDrag(_ url: URL) {
         draggedFile = url
         dragWatch?.cancel()

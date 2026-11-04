@@ -68,7 +68,7 @@ Jullia.md é um visualizador de Markdown e PDF nativo para macOS, feito em Swift
 
 ## Novidades da versão 0.9.0
 
-- **Arrastar para o lado**: arraste um arquivo da sidebar para a área de leitura. Solto no meio de um painel, abre nele; solto na metade esquerda ou direita, abre num painel novo daquele lado.
+- **Arrastar para o lado**: arraste um arquivo da sidebar ou do Finder para a área de leitura. Solto no meio de um painel, abre nele; solto na metade esquerda ou direita, abre num painel novo daquele lado.
 
 ## Novidades da versão 0.8.0
 
@@ -162,7 +162,7 @@ Para instalar sem abrir ao final:
 
 ### Abrir seus documentos
 
-Use **⌘O** para abrir arquivos ou **⇧⌘O** para adicionar uma pasta. Também é possível arrastar arquivos e pastas para a sidebar ou para a tela inicial, e abrir um `.md` ou `.pdf` pelo Finder com **Abrir com → Jullia.md**.
+Use **⌘O** para abrir arquivos ou **⇧⌘O** para adicionar uma pasta. Também é possível arrastar arquivos e pastas para a sidebar ou para a tela inicial, e arquivos para um painel, e abrir um `.md` ou `.pdf` pelo Finder com **Abrir com → Jullia.md**.
 
 Para experimentar, abra a pasta [`examples`](examples) e selecione [`Boas-vindas.md`](examples/Boas-vindas.md). Os textos de demonstração vêm sem anotações; os comentários das imagens são criados pelo gerador de screenshots.
 

@@ -167,20 +167,18 @@ struct PaneView: View {
             }
             .background(PaneFocusMonitor { [weak workspace] in workspace?.focus(index) })
             .overlay {
-                if model.draggedFile != nil {
-                    PaneDropTarget(
-                        allowsSides: workspace.canAddPane && tab != nil,
-                        color: theme.accent.ns
-                    ) { url, side in
-                        model.dropFile(url, on: index, side: side)
-                    }
+                PaneDropTarget(
+                    allowsSides: workspace.canAddPane && tab != nil,
+                    color: theme.accent.ns
+                ) { url, side in
+                    model.dropFile(url, on: index, side: side)
                 }
             }
         }
     }
 }
 
-/// Over a pane while a file is dragged from the sidebar: shows where it would land (the whole pane, or the half
+/// Over a pane, for a file dragged from the sidebar or Finder: shows where it would land (the whole pane, or the half
 /// where a new pane would open) and takes the drop. An AppKit view, so it sits above the PDF and text views, which
 /// would otherwise receive the drag.
 private struct PaneDropTarget: NSViewRepresentable {
@@ -218,6 +216,9 @@ final class DropTargetView: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    /// Always over the pane, so never in the way of clicks: drags find it through their registered types.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     /// The outer thirds open a new pane on that side, when there is room for one; the rest replaces the pane's file.
     func side(at point: NSPoint) -> DropSide {
