@@ -489,7 +489,8 @@ final class AnnotatedPDFView: PDFView {
         let rects = lines.flatMap { line in
             line.pages.map { convert(line.bounds(for: $0), from: $0) }
         }
-        guard let rect = rects.first(where: { bounds.intersects($0) }) else { return }
+        // A line PDFKit cannot place converts to a NaN rect, which still passes intersects and crashes setFrame.
+        guard let rect = rects.first(where: { $0.midX.isFinite && $0.midY.isFinite && bounds.intersects($0) }) else { return }
         let content = SelectionPill(
             theme: theme, current: highlight?.color,
             onColor: { [weak self] color in self?.mark(anchor, highlight: highlight, color: color) },
